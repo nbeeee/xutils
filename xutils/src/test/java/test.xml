@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE beans PUBLIC "-//XUTILS//DTD CONFIG//EN" "xutils-config.dtd">
+<beans>
+	<import key="mystore">MYSTORE java.lang.String</import>
+	<import key="map">java.util.HashMap</import>
+	<import>file:///${xutils.home}/config.xml</import>
+	<array class="java.lang.Object" id="@number">
+		<arg class="byte">0</arg>
+		<arg class="int">1</arg>
+		<arg class="long">2</arg>
+		<arg class="short">3</arg>
+		<arg class="double">4</arg>
+		<arg class="float">5</arg>
+		<arg class="boolean">true</arg>
+		<arg class="char">C</arg>
+	</array>
+	<array class="byte" id="@bytearray2">
+		<arg>3</arg>
+		<arg>4</arg>
+		<arg>5</arg>
+	</array>
+	<bean class="${map}" id="map" eager="true">
+		<set property="empty"></set>
+		<set property="string">${xutils.home}</set>
+		<set property="int" class="int">124</set>
+		<set property="bytearray" ref="@bytearray2" />
+		<set property="objectlist" class="java.util.List" ref="@number"/>
+		<set property="bytelist" class="java.util.List" ref="@bytearray2"/>
+	</bean>
+	<alias ref="map" id="amap">
+		<aop class="java.util.Map"/>
+	</alias>
+	<bean class="zcu.xutil.cfg.Book" id="numb" cache="false">
+		<arg>numb</arg>
+		<arg class="double">1</arg>
+		<arg>2</arg>
+	</bean>
+	<bean class="zcu.xutil.cfg.Store" id="mystoreMap">
+			<arg>
+				<bean class="java.util.HashMap">
+					<set property="REFbook" ref="numb"></set>
+					<set property="NEWbook">
+						<bean class="zcu.xutil.cfg.Book">
+
+								<arg>innnnnrrrrr</arg>
+								<arg class="double">1</arg>
+								<arg>2</arg>
+
+						</bean>
+					</set>
+				</bean>
+			</arg>
+	</bean>
+	<bean class="zcu.xutil.cfg.Store" id="mystore" destroy="xx">
+			<arg>${mystore}</arg>
+			<arg>
+				<array class="zcu.xutil.cfg.Book">
+					<arg ref="numb"/>
+				</array>
+			</arg>
+	</bean>
+	<array class="byte" id="bytearray">
+		<arg>1</arg>
+		<arg>3</arg>
+		<arg>5</arg>
+	</array>
+	<bean class="int" id="int">
+
+			<arg><![CDATA[999999]]></arg>
+
+	</bean>
+
+
+	<bean class="zcu.xutil.FirstBean" id="firstBean">
+		<set property="firstString">${}</set>
+		<call method="setFirstInteger">
+			<arg>9999</arg>
+		</call>
+		<set property="firstInt" ref="int" />
+		<set property="firstbytes" ref="bytearray" />
+	</bean>
+	
+
+	<bean id="staticFactory" method="zcu.xutil.Objutil.toURL">
+		<arg class="java.io.File">${xutils.home}</arg>
+	</bean>
+	<bean class="zcu.xutil.FirstBean" id="output">
+		<set property="firstString">oooooooooo</set>
+		<call method="setFirstInteger">
+			<arg>9999</arg>
+		</call>
+		<set property="firstInt" ref="int" />
+		<set property="firstbytes" ref="bytearray" />
+		<out method="getFirstString" />
+	</bean>
+	<bean class="zcu.xutil.FirstBean" id="bean2">
+		<set property="firstString">oooooooooo</set>
+		<call method="setFirstInteger">
+			<arg>9999</arg>
+		</call>
+		<set property="firstInt" ref="int" />
+		<set property="firstbytes">
+			<array class="byte">
+				<arg>1</arg>
+				<arg>3</arg>
+				<arg>5</arg>
+			</array>
+		</set>
+	</bean>
+	<bean class="java.lang.String" id="factory" method="bean2:getFirstString"/>
+</beans>

@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+  <appender name="STDOUT"  class="ch.qos.logback.core.ConsoleAppender">
+      <!-- encoders are assigned the type  ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+  	<encoder>
+    	<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %lo{35} - %msg%n</pattern>
+  	</encoder>
+   </appender>
+
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <File>logs/mylog.log</File>
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <FileNamePattern>logFile.%d{yyyy-MM-dd}.log</FileNamePattern>
+    </rollingPolicy>
+     <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+    	<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %lo{35} - %msg%n</pattern>
+  	</encoder>
+  </appender>
+
+  <appender name="REMOTE" class="zcu.xutil.misc.RemoteAppender">
+    <sendprefer>false</sendprefer>
+    <httpmode>false</httpmode>
+    <includeCallerData>false</includeCallerData>
+  </appender>
+
+  <root>
+    <level value="info" />
+    <appender-ref ref="STDOUT"/>
+  </root>
+
+  <logger name="zcu.xutil">
+     <level value="debug"/>
+  </logger>
+
+  <logger name="remote" additivity="false">
+     <level value="debug"/>
+     <appender-ref ref="REMOTE"/>
+  </logger>
+
+</configuration>

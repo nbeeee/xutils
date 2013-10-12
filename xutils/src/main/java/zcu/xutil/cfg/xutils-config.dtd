@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!ELEMENT beans (array|bean|alias|import)+>
+<!ELEMENT import (#PCDATA)>
+<!ATTLIST import key CDATA #IMPLIED>
+<!ELEMENT bean (arg*,(set|call)*,out?,aop?)>
+<!ATTLIST bean id CDATA #IMPLIED>
+<!ATTLIST bean class CDATA #IMPLIED>
+<!ATTLIST bean cache (true|false) "true">
+<!ATTLIST bean eager (true|false) "false">
+<!ATTLIST bean method CDATA #IMPLIED>
+<!ATTLIST bean destroy CDATA #IMPLIED>
+<!ELEMENT array (arg*)>
+<!ATTLIST array id CDATA #IMPLIED>
+<!ATTLIST array cache (true|false) "false">
+<!ATTLIST array class CDATA #REQUIRED>
+<!ELEMENT alias (aop?)>
+<!ATTLIST alias id CDATA #REQUIRED>
+<!ATTLIST alias ref CDATA #REQUIRED>
+<!ELEMENT set (#PCDATA|bean|array)*>
+<!ATTLIST set property CDATA #REQUIRED>
+<!ATTLIST set class CDATA #IMPLIED>
+<!ATTLIST set ref CDATA #IMPLIED>
+<!ELEMENT call (arg*)>
+<!ATTLIST call method CDATA #REQUIRED>
+<!ELEMENT out (arg*)>
+<!ATTLIST out class CDATA #IMPLIED>
+<!ATTLIST out method CDATA #REQUIRED>
+<!ELEMENT aop (#PCDATA)>
+<!ATTLIST aop class CDATA #IMPLIED>
+<!ELEMENT arg (#PCDATA|bean|array)*>
+<!ATTLIST arg class CDATA #IMPLIED>
+<!ATTLIST arg ref CDATA #IMPLIED>

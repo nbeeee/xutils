@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE beans PUBLIC "-//XUTILS//DTD CONFIG//EN" "xutils-config.dtd">
+<beans>
+	<import>testScript.js</import>
+	<bean id="h2ds" class="zcu.xutil.txm.SmartDataSource">
+		<arg>
+			<bean class="zcu.xutil.sql.MiniDataSource" destroy="destroy">
+				<arg>
+					<bean class="org.h2.jdbcx.JdbcDataSource">
+						<set property="URL">jdbc:h2:~/h2db/test;DB_CLOSE_DELAY=-1</set>
+						<set property="user">sa</set>
+					</bean>
+				</arg>
+				<arg>4</arg>
+				<arg>8</arg>
+			</bean>
+		</arg>
+	</bean>
+	<bean id="query" class="zcu.xutil.sql.Query">
+		<arg ref="h2ds" />
+	</bean>
+	
+</beans>
