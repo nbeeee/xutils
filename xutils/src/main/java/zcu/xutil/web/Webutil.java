@@ -27,6 +27,8 @@ import java.util.regex.Pattern;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.ws.WebServiceContext;
+import javax.xml.ws.handler.MessageContext;
 
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
@@ -67,7 +69,6 @@ public final class Webutil implements Checker<Accessor> {
 	 * request attributes.
 	 */
 	public static final String INCLUDE_REQUEST_URI = "javax.servlet.include.request_uri";
-	
 
 	public static String getFilename(HttpServletRequest request) {
 		String uri = (String) request.getAttribute(INCLUDE_REQUEST_URI);
@@ -114,12 +115,17 @@ public final class Webutil implements Checker<Accessor> {
 		} else if (seconds == 0)
 			preventCaching(response);
 	}
-	
+
 	static final String XUTILS_WEBAPP_CONTEXT = "xutils.webapp.context";
-	
+
 	public static Context getAppContext(ServletContext servletContext) {
 		Context ret = (Context) servletContext.getAttribute(XUTILS_WEBAPP_CONTEXT);
 		return ret == null ? CFG.root() : ret;
+	}
+
+	public static Context getAppContext(WebServiceContext webServiceContext) {
+		ServletContext sc = (ServletContext) webServiceContext.getMessageContext().get(MessageContext.SERVLET_CONTEXT);
+		return sc == null ? CFG.root() : getAppContext(sc);
 	}
 
 	private static volatile Webutil injector;

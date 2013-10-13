@@ -46,22 +46,24 @@ import zcu.xutil.utils.MethodInvocation;
  * 
  */
 public final class Dispatcher implements Filter {
-	public static final String extension = Objutil.systring(Constants.XUTILS_WEB_ACTION_EXTENSION, ".do");
+	public static final String extension;
+	public static final String objectsKey;
+	static {
+		String s = Objutil.systring(Constants.XUTILS_WEB_ACTION_EXTENSION);
+		extension = Objutil.isEmpty(s) ? ".do" : s;
+		objectsKey = Objutil.isEmpty(s = Objutil.systring(Constants.XUTILS_WEB_OBJECTS_KEY)) ? "xwo" : s;
+	}
+
+	private Resolver[] resolvers;
+	private String[] resolverNames;
 	ServletContext servletCtx;
 	Context context;
-	Filter[] filters;
-	Resolver[] resolvers;
-	String[] resolverNames;
 
 	@Override
 	public void init(FilterConfig cfg) throws ServletException {
 		context = Webutil.getAppContext(servletCtx = cfg.getServletContext());
-		List<NProvider> res = context.getProviders(Filter.class);
+		List<NProvider> res = context.getProviders(Resolver.class);
 		int len = res.size();
-		filters = new Filter[len];
-		while (--len >= 0)
-			(filters[len] = (Filter) res.get(len).instance()).init(cfg);
-		len = (res = context.getProviders(Resolver.class)).size();
 		resolvers = new Resolver[len];
 		resolverNames = new String[len];
 		while (--len >= 0) {
@@ -71,9 +73,20 @@ public final class Dispatcher implements Filter {
 	}
 
 	@Override
-	public void doFilter(ServletRequest req, ServletResponse resp, final FilterChain chain) throws IOException,
+	public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException,
 			ServletException {
-		new Executor(chain).doFilter(req, resp);
+		String name = Webutil.getFilename((HttpServletRequest) req);
+		if (name.endsWith(extension) || getResolver(name) != null)
+			new Executor((HttpServletRequest) req, (HttpServletResponse) resp).forward(name, null);
+		else
+			chain.doFilter(req, resp);
+	}
+
+	Resolver getResolver(String name) {
+		for (int i = resolverNames.length - 1; i >= 0; i--)
+			if (name.endsWith(resolverNames[i]))
+				return resolvers[i];
+		return null;
 	}
 
 	@Override
@@ -81,28 +94,15 @@ public final class Dispatcher implements Filter {
 		// nothing
 	}
 
-	private final class Executor extends WebContext implements Invocation, FilterChain {
-		private final FilterChain chain;
-		private int cursor;
-		private HttpServletRequest request;
-		private HttpServletResponse response;
+	private final class Executor extends WebContext implements Invocation {
+		private final HttpServletRequest request;
+		private final HttpServletResponse response;
 		private String name;
 		private MethodInvocation invoc;
 
-		Executor(FilterChain fc) {
-			chain = fc;
-		}
-
-		@Override
-		public void doFilter(ServletRequest req, ServletResponse resp) throws IOException, ServletException {
-			if (cursor < filters.length)
-				filters[cursor++].doFilter(req, resp, this);
-			else {
-				request = (HttpServletRequest) req;
-				response = (HttpServletResponse) resp;
-				if (!forward(Webutil.getFilename(request), null))
-					chain.doFilter(req, resp);
-			}
+		Executor(HttpServletRequest req, HttpServletResponse resp) {
+			request = req;
+			response = resp;
 		}
 
 		@Override
@@ -142,7 +142,6 @@ public final class Dispatcher implements Filter {
 		public String getActionName() {
 			return name;
 		}
-		
 
 		@Override
 		public Map<String, String> inject(Object obj) {
@@ -179,47 +178,47 @@ public final class Dispatcher implements Filter {
 					v.handle(this);
 				return true;
 			}
-			for (int i = resolverNames.length - 1; i >= 0; i--)
-				if (view.endsWith(resolverNames[i])) {
-					if (model == null)
-						model = new HashMap<String, Object>();
-					Objutil.dupChkPut(model, "request", request);
-					Objutil.dupChkPut(model, "response", response);
-					Objutil.dupChkPut(model, "application", servletCtx);
-					resolvers[i].resolve(view, model, new Writer() {
-						PrintWriter printer;
-
-						@Override
-						public void close() throws IOException {
-							// nothing
-						}
-
-						@Override
-						public void flush() throws IOException {
-							if (printer != null)
-								printer.flush();
-						}
-
-						@Override
-						public void write(char[] cbuf, int off, int len) throws IOException {
-							if (printer == null) {
-								while (len > 0 && cbuf[off] <= ' ') {
-									off++;
-									len--;
-								}
-								if (len <= 0)
-									return;
-								HttpServletResponse resp = getResponse();
-								if (resp.getContentType() == null)
-									resp.setContentType("text/html; charset=UTF-8");
-								printer = resp.getWriter();
-							}
-							printer.write(cbuf, off, len);
-						}
-					});
-					return true;
-				}
-			return false;
+			Resolver resolver = getResolver(view);
+			if (resolver == null)
+				return false;
+			if (model == null)
+				model = new HashMap<String, Object>();
+			Objutil.dupChkPut(model, objectsKey, this);
+			resolver.resolve(view, model, getWriter(response));
+			return true;
 		}
+	}
+
+	static Writer getWriter(final HttpServletResponse resp) {
+		return new Writer() {
+			PrintWriter printer;
+
+			@Override
+			public void close() throws IOException {
+				// nothing
+			}
+
+			@Override
+			public void flush() throws IOException {
+				if (printer != null)
+					printer.flush();
+			}
+
+			@Override
+			public void write(char[] cbuf, int off, int len) throws IOException {
+				if (printer == null) {
+					while (len > 0 && cbuf[off] <= ' ') {
+						off++;
+						len--;
+					}
+					if (len <= 0)
+						return;
+					if (resp.getContentType() == null)
+						resp.setContentType("text/html; charset=UTF-8");
+					printer = resp.getWriter();
+				}
+				printer.write(cbuf, off, len);
+			}
+		};
 	}
 }
