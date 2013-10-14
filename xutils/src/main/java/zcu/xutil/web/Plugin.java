@@ -45,8 +45,8 @@ public abstract class Plugin implements Interceptor {
 	@Override
 	public final Object invoke(MethodInvocation mi) throws Throwable {
 		Object[] args = mi.getArguments();
-		if (args.length == 1 && args[0] instanceof WebContext)
-			return intercept(((WebContext) args[0]).setInterceptorInvoc(mi));
+		if (args.length == 1 && args[0] instanceof WebContext && "execute".equals(mi.getMethod().getName()))
+			return intercept(((WebContext) args[0]).setMethodInvocation(mi));
 		return mi.proceed();
 	}
 }

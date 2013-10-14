@@ -144,12 +144,12 @@ public final class Webutil implements Checker<Accessor> {
 	private final Convertor convertor;
 	private final ResourceBundle bundle;
 	private final Map<String, Pattern> patterns;
-	private final LRUCache<Class, Map<String, Accessor>> cache;
+	private final LRUCache<Class, Map<String, Accessor>> accessors;
 
 	private Webutil() {
 		convertor = new Convertor();
 		patterns = Util.lruMap(Objutil.systring(XUTILS_WEB_PATTERNS_CACHE, 95), null);
-		cache = new LRUCache<Class, Map<String, Accessor>>(Objutil.systring(XUTILS_WEB_ACTIONS_CACHE, 95), null);
+		accessors = new LRUCache<Class, Map<String, Accessor>>(Objutil.systring(XUTILS_WEB_ACTIONS_CACHE, 95), null);
 		bundle = ResourceBundle.getBundle(Objutil.systring(XUTILS_WEB_BUNDLE_NAME, XResource.class.getName()));
 		try {
 			defaults = Webutil.class.getDeclaredField("defaults").getAnnotation(Validator.class);
@@ -166,11 +166,11 @@ public final class Webutil implements Checker<Accessor> {
 	}
 
 	private Map<String, Accessor> getAllAccessor(Class clazz) {
-		Map<String, Accessor> result = cache.get(clazz);
+		Map<String, Accessor> result = accessors.get(clazz);
 		if (result != null)
 			return result;
 		result = AccessField.build(clazz, this, true);
-		return Objutil.ifNull(cache.putIfAbsent(clazz, result), result);
+		return Objutil.ifNull(accessors.putIfAbsent(clazz, result), result);
 	}
 
 	@Override

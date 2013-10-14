@@ -68,9 +68,9 @@ public final class Util implements Iterator {
 		return null;
 	}
 
-//	public static int getParamsLen(Method m) {
-//		return getParamTypes(m).length;
-//	}
+	// public static int getParamsLen(Method m) {
+	// return getParamTypes(m).length;
+	// }
 
 	public static boolean isSetter(Method m) {
 		return getSetterType(m) != null;
@@ -91,7 +91,8 @@ public final class Util implements Iterator {
 		if (s.startsWith("get")) {
 			if (s.length() > 3 && m.getReturnType() != Void.TYPE && m.getParameterTypes().length == 0)
 				return 3;
-		} else if (s.startsWith("is") && s.length() > 2 && m.getReturnType() == Boolean.TYPE && m.getParameterTypes().length  == 0)
+		} else if (s.startsWith("is") && s.length() > 2 && m.getReturnType() == Boolean.TYPE
+				&& m.getParameterTypes().length == 0)
 			return 2;
 		return -1;
 	}
@@ -238,7 +239,7 @@ public final class Util implements Iterator {
 
 	@SuppressWarnings("serial")
 	public static <K, V> Map<K, V> lruMap(final int maximun, final EvictListener<K, V> evict) {
-		return new LinkedHashMap<K, V>(maximun >> 1, 0.75f, true) {
+		return new LinkedHashMap<K, V>(maximun > 64 ? (maximun >> 1) : maximun, 0.75f, true) {
 			@Override
 			protected boolean removeEldestEntry(Entry<K, V> eldest) {
 				if (size() <= maximun)
@@ -347,10 +348,12 @@ public final class Util implements Iterator {
 			if (r != this)
 				vlock.set(1);
 		}
+
 		@Override
 		public void run() {
 			// nothing
 		}
+
 		@Override
 		public Thread newThread(Runnable target) {
 			return Util.newThread(target, "Timer", true);
@@ -373,6 +376,7 @@ public final class Util implements Iterator {
 		one = a;
 		two = b;
 	}
+
 	@Override
 	public boolean hasNext() {
 		if (one != null) {
@@ -382,10 +386,12 @@ public final class Util implements Iterator {
 		}
 		return two.hasNext();
 	}
+
 	@Override
 	public Object next() {
 		return one == null ? two.next() : one.next();
 	}
+
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException();

@@ -21,6 +21,8 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import zcu.xutil.cfg.Context;
+
 
 /**
  *
@@ -32,6 +34,8 @@ public interface ActionContext{
 	HttpServletResponse getResponse();
 
 	ServletContext getServletContext();
+	
+	Context getContext();
 
 	String getActionName();
 	

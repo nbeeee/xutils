@@ -33,12 +33,13 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import zcu.xutil.Constants;
 import zcu.xutil.Objutil;
 import zcu.xutil.cfg.Context;
 import zcu.xutil.cfg.NProvider;
 import zcu.xutil.cfg.Provider;
 import zcu.xutil.utils.MethodInvocation;
+import static zcu.xutil.Objutil.*;
+import static zcu.xutil.Constants.*;
 
 /**
  * 
@@ -46,13 +47,8 @@ import zcu.xutil.utils.MethodInvocation;
  * 
  */
 public final class Dispatcher implements Filter {
-	public static final String extension;
-	public static final String objectsKey;
-	static {
-		String s = Objutil.systring(Constants.XUTILS_WEB_ACTION_EXTENSION);
-		extension = Objutil.isEmpty(s) ? ".do" : s;
-		objectsKey = Objutil.isEmpty(s = Objutil.systring(Constants.XUTILS_WEB_OBJECTS_KEY)) ? "xwo" : s;
-	}
+	static final String extension = notEmpty(systring(XUTILS_WEB_ACTION_EXTENSION, ".do"), XUTILS_WEB_ACTION_EXTENSION);
+	static final String objectsKey = notEmpty(systring(XUTILS_WEB_OBJECTS_KEY, "xwo"), XUTILS_WEB_OBJECTS_KEY);
 
 	private Resolver[] resolvers;
 	private String[] resolverNames;
@@ -82,18 +78,19 @@ public final class Dispatcher implements Filter {
 			chain.doFilter(req, resp);
 	}
 
-	Resolver getResolver(String name) {
-		for (int i = resolverNames.length - 1; i >= 0; i--)
-			if (name.endsWith(resolverNames[i]))
-				return resolvers[i];
-		return null;
-	}
-
 	@Override
 	public void destroy() {
 		// nothing
 	}
-
+	
+	Resolver getResolver(String name) {
+		int i = resolverNames.length;
+		while (--i >= 0) {
+			if (name.endsWith(resolverNames[i]))
+				return resolvers[i];
+		}
+		return null;
+	}
 	private final class Executor extends WebContext implements Invocation {
 		private final HttpServletRequest request;
 		private final HttpServletResponse response;
@@ -121,21 +118,8 @@ public final class Dispatcher implements Filter {
 		}
 
 		@Override
-		public Object getAction() {
-			return invoc.getThis();
-		}
-
-		@Override
-		public View proceed() throws ServletException, IOException {
-			try {
-				return (View) invoc.proceed();
-			} catch (ServletException e) {
-				throw e;
-			} catch (IOException e) {
-				throw e;
-			} catch (Throwable e) {
-				throw Objutil.rethrow(e);
-			}
+		public Context getContext() {
+			return context;
 		}
 
 		@Override
@@ -148,13 +132,9 @@ public final class Dispatcher implements Filter {
 			return Webutil.inject(request, obj);
 		}
 
-		@Override
-		Context getContext() {
-			return context;
-		}
 
 		@Override
-		Invocation setInterceptorInvoc(MethodInvocation mi) {
+		Invocation setMethodInvocation(MethodInvocation mi) {
 			invoc = mi;
 			return this;
 		}
@@ -184,41 +164,66 @@ public final class Dispatcher implements Filter {
 			if (model == null)
 				model = new HashMap<String, Object>();
 			Objutil.dupChkPut(model, objectsKey, this);
-			resolver.resolve(view, model, getWriter(response));
+			resolver.resolve(view, model, new RespWriter(response));
 			return true;
+		}
+		
+		@Override
+		public Object getAction() {
+			return invoc.getThis();
+		}
+
+		@Override
+		public View proceed() throws ServletException, IOException {
+			try {
+				return (View) invoc.proceed();
+			} catch (ServletException e) {
+				throw e;
+			} catch (IOException e) {
+				throw e;
+			} catch (Throwable e) {
+				throw Objutil.rethrow(e);
+			}
 		}
 	}
 
-	static Writer getWriter(final HttpServletResponse resp) {
-		return new Writer() {
-			PrintWriter printer;
+	private static class RespWriter extends Writer {
+		private HttpServletResponse response;
+		private PrintWriter printer;
 
-			@Override
-			public void close() throws IOException {
-				// nothing
-			}
+		RespWriter(HttpServletResponse resp) {
+			response = resp;
+		}
 
-			@Override
-			public void flush() throws IOException {
-				if (printer != null)
-					printer.flush();
-			}
+		@Override
+		public void close() throws IOException {
+			flush();
+			response = null;
+			printer = null;
+		}
 
-			@Override
-			public void write(char[] cbuf, int off, int len) throws IOException {
-				if (printer == null) {
-					while (len > 0 && cbuf[off] <= ' ') {
-						off++;
-						len--;
-					}
-					if (len <= 0)
-						return;
-					if (resp.getContentType() == null)
-						resp.setContentType("text/html; charset=UTF-8");
-					printer = resp.getWriter();
+		@Override
+		public void flush() throws IOException {
+			if (printer != null)
+				printer.flush();
+		}
+
+		@Override
+		public void write(char[] cbuf, int off, int len) throws IOException {
+			if (printer == null) {
+				while (len > 0 && cbuf[off] <= ' ') {
+					off++;
+					len--;
 				}
-				printer.write(cbuf, off, len);
+				if (len <= 0)
+					return;
+				if (response == null)
+					throw new IOException("closed");
+				if (response.getContentType() == null)
+					response.setContentType("text/html; charset=UTF-8");
+				printer = response.getWriter();
 			}
-		};
+			printer.write(cbuf, off, len);
+		}
 	}
 }

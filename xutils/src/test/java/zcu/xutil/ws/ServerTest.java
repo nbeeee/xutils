@@ -18,7 +18,7 @@ import zcu.xutil.cfg.DefaultBinder;
 import zcu.xutil.cfg.NProvider;
 import zcu.xutil.cfg.RefCaller;
 import zcu.xutil.utils.Function;
-import zcu.xutil.ws.SecurityHandler;
+import zcu.xutil.ws.ServerSecurityHandler;
 import zcu.xutil.ws.WSEFactory;
 import zcu.xutil.ws.XutilContainer;
 
@@ -33,7 +33,7 @@ public class ServerTest implements Config {
 
 	@Override
 	public void config(Binder b) throws Exception {
-		Handler h = new SecurityHandler(new Authenticator());
+		Handler h = new ServerSecurityHandler();
 		RefCaller wsef = CFG.typ(WSEFactory.class).set("handlers",Collections.singletonList(h)).set("container",b);
 		wsef.set("implClass",Add.class).set("target",new Add()).ext("getObject").uni(b,"add");
 		wsef.set("target",new Mutile()).ext("getObject").uni(b,"mul");

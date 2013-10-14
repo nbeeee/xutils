@@ -18,19 +18,11 @@ package zcu.xutil.web;
 import java.io.IOException;
 import java.util.Map;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
-import zcu.xutil.cfg.Context;
 import zcu.xutil.utils.MethodInvocation;
 
-public abstract class WebContext {
-	public abstract HttpServletRequest getRequest();
-	public abstract HttpServletResponse getResponse();
-	public abstract ServletContext getServletContext();
-	abstract Context getContext();
-	abstract Invocation setInterceptorInvoc(MethodInvocation mi);
+public abstract class WebContext implements ActionContext{
+	abstract Invocation setMethodInvocation(MethodInvocation mi);
 	abstract boolean forward(String view, Map<String, Object> model) throws ServletException, IOException;
 }
