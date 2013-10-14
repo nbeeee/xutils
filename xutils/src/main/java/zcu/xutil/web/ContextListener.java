@@ -17,9 +17,7 @@ package zcu.xutil.web;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.EnumSet;
 
-import javax.servlet.DispatcherType;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -35,28 +33,25 @@ import zcu.xutil.cfg.DefaultBinder;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public class ContextListener implements ServletContextListener {
-	@Override
-	public void contextInitialized(ServletContextEvent event) {
-		ServletContext sc = event.getServletContext();
-		URL url;
+	static URL getConfig(ServletContext sc) {
 		try {
-			if ((url = sc.getResource("/xutils-webapp.xml")) == null)
-				 url = Objutil.contextLoader().getResource("xutils-webapp.xml");
+			URL url = sc.getResource("/xutils-webapp.xml");
+			return url != null ? url : Objutil.contextLoader().getResource("xutils-webapp.xml");
 		} catch (MalformedURLException e) {
 			throw new XutilRuntimeException(e);
 		}
-		Context context = CFG.root();
-		if(url != null){
-			DefaultBinder b = new DefaultBinder("webapp",context);
+	}
+
+	@Override
+	public void contextInitialized(ServletContextEvent event) {
+		ServletContext sc = event.getServletContext();
+		URL url = getConfig(sc);
+		if (url != null) {
+			DefaultBinder b = new DefaultBinder("webapp", CFG.root());
 			b.setEnv(ServletContext.class.getName(), sc);
 			b.bind(url);
-			context =  b.startup();
 			Objutil.validate(sc.getAttribute(Webutil.XUTILS_WEBAPP_CONTEXT) == null, "webapp context present.");
-			sc.setAttribute(Webutil.XUTILS_WEBAPP_CONTEXT, context);
-		}
-		if (sc.getMajorVersion() >= 3 && sc.getEffectiveMajorVersion() >=3){
-			if(!context.getProviders(Action.class).isEmpty() || !context.getProviders(Resolver.class).isEmpty())
-				sc.addFilter("dispatcher",Dispatcher.class).addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class), true, "/*");
+			sc.setAttribute(Webutil.XUTILS_WEBAPP_CONTEXT, b.startup());
 		}
 	}
 

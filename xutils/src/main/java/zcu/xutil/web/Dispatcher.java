@@ -18,6 +18,7 @@ package zcu.xutil.web;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.cfg.Context;
 import zcu.xutil.cfg.NProvider;
@@ -66,6 +68,11 @@ public final class Dispatcher implements Filter {
 			resolverNames[len] = res.get(len).getName();
 			resolvers[len] = (Resolver) res.get(len).instance();
 		}
+		Enumeration<String> e = cfg.getInitParameterNames();
+		while(e.hasMoreElements()){
+			Logger.LOG.info(cfg.getInitParameter(e.nextElement()));
+		}
+		
 	}
 
 	@Override

@@ -5,8 +5,7 @@ importPackage(Packages.zcu.xutil);
 new Config(){
 	config : function(b) {
 		var obj = {
-				context : b.ref("").instance(),
-				execute : function(c){obj.context.listMe(); return null;}
+				execute : function(c){return new Stream(".txt",c.getContext().listMe().toString());}
 		};
 		CFG.val("test").put(b,"testStr");
 		CFG.val(new JavaAdapter(Action,obj)).put(b,"action")

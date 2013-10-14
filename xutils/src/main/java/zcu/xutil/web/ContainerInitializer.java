@@ -15,15 +15,23 @@
  */
 package zcu.xutil.web;
 
+import java.util.EnumSet;
 import java.util.Set;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
-public class ContainerInitializer implements ServletContainerInitializer{
+public class ContainerInitializer implements ServletContainerInitializer {
 	@Override
 	public void onStartup(Set<Class<?>> set, ServletContext sc) throws ServletException {
-		sc.addListener(ContextListener.class);
+		if (ContextListener.getConfig(sc) != null) {
+			sc.addListener(ContextListener.class);
+			FilterRegistration.Dynamic dynamic = sc.addFilter("dispatcher", Dispatcher.class);
+			if (dynamic != null)
+				dynamic.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class), true, "/*");
+		}
 	}
 }

@@ -32,18 +32,14 @@ import java.net.URL;
 import java.net.MalformedURLException;
 
 /**
- *
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
-public class XutilContainer extends Container{
+public class XutilContainer extends Container {
 	final ServletContext servletContext;
-	private final List<BoundEndpoint> endpoints = new ArrayList<BoundEndpoint>();
-
-	public XutilContainer(ServletContext sc){
-		servletContext = sc;
-	}
 	private final ServletModule module = new ServletModule() {
-		@SuppressWarnings("synthetic-access")
+		private final List<BoundEndpoint> endpoints = new ArrayList<BoundEndpoint>();
+
 		@Override
 		public @NotNull
 		List<BoundEndpoint> getBoundEndpoints() {
@@ -56,7 +52,7 @@ public class XutilContainer extends Container{
 			throw new WebServiceException("doesn't support getContextPath()");
 		}
 	};
-
+	
 	private final ResourceLoader loader = new ResourceLoader() {
 		@Override
 		public URL getResource(String resource) throws MalformedURLException {
@@ -65,6 +61,10 @@ public class XutilContainer extends Container{
 			return servletContext.getResource("/WEB-INF/" + resource);
 		}
 	};
+	
+	public XutilContainer(ServletContext sc) {
+		servletContext = sc;
+	}
 
 	@Override
 	public <T> T getSPI(Class<T> spiType) {
