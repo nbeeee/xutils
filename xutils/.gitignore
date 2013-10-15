@@ -1,1 +1,8 @@
+/.settings
 /bin
+/target
+/logs
+/xmessage
+/config.xml
+/loggerService.xml
+/xutils.properties

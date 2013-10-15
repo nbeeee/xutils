@@ -18,7 +18,6 @@ package zcu.xutil.web;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +37,6 @@ import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.cfg.Context;
 import zcu.xutil.cfg.NProvider;
-import zcu.xutil.cfg.Provider;
 import zcu.xutil.utils.MethodInvocation;
 import static zcu.xutil.Objutil.*;
 import static zcu.xutil.Constants.*;
@@ -54,6 +52,7 @@ public final class Dispatcher implements Filter {
 
 	private Resolver[] resolvers;
 	private String[] resolverNames;
+	Map<String, String> nameToPermission;
 	ServletContext servletCtx;
 	Context context;
 
@@ -68,18 +67,21 @@ public final class Dispatcher implements Filter {
 			resolverNames[len] = res.get(len).getName();
 			resolvers[len] = (Resolver) res.get(len).instance();
 		}
-		Enumeration<String> e = cfg.getInitParameterNames();
-		while(e.hasMoreElements()){
-			Logger.LOG.info(cfg.getInitParameter(e.nextElement()));
+		len = (res = context.getProviders(Action.class)).size();
+		nameToPermission = new HashMap<String, String>(len);
+		while (--len >= 0) {
+			String name = res.get(len).getName();
+			int i = name.indexOf(':');
+			dupChkPut(nameToPermission, name.substring(0, i), name.substring(i+1));
 		}
-		
+		Logger.LOG.info("inited: resolver={}  actions={}",resolverNames,nameToPermission);
 	}
 
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException,
 			ServletException {
 		String name = Webutil.getFilename((HttpServletRequest) req);
-		if (name.endsWith(extension) || getResolver(name) != null)
+		if (nameToPermission.containsKey(name) || getResolver(name) != null)
 			new Executor((HttpServletRequest) req, (HttpServletResponse) resp).forward(name, null);
 		else
 			chain.doFilter(req, resp);
@@ -89,7 +91,7 @@ public final class Dispatcher implements Filter {
 	public void destroy() {
 		// nothing
 	}
-	
+
 	Resolver getResolver(String name) {
 		int i = resolverNames.length;
 		while (--i >= 0) {
@@ -98,6 +100,7 @@ public final class Dispatcher implements Filter {
 		}
 		return null;
 	}
+
 	private final class Executor extends WebContext implements Invocation {
 		private final HttpServletRequest request;
 		private final HttpServletResponse response;
@@ -139,7 +142,6 @@ public final class Dispatcher implements Filter {
 			return Webutil.inject(request, obj);
 		}
 
-
 		@Override
 		Invocation setMethodInvocation(MethodInvocation mi) {
 			invoc = mi;
@@ -148,18 +150,14 @@ public final class Dispatcher implements Filter {
 
 		@Override
 		boolean forward(String view, Map<String, Object> model) throws ServletException, IOException {
-			if (view.endsWith(extension)) {
-				view = view.substring(0, view.length() - extension.length());
-				Provider provider = getContext().getProvider(view);
-				if (provider == null || !Action.class.isAssignableFrom(provider.getType()))
-					return false;
+			if (nameToPermission.containsKey(view)) {
 				Objutil.validate(!view.equals(name), "repeat action: {}", view);
 				name = view;
 				if (model != null) {
 					for (Entry<String, Object> entry : model.entrySet())
 						request.setAttribute(entry.getKey(), entry.getValue());
 				}
-				View v = ((Action) provider.instance()).execute(this);
+				View v = ((Action) context.getBean(view)).execute(this);
 				invoc = null;
 				if (v != null)
 					v.handle(this);
@@ -174,10 +172,15 @@ public final class Dispatcher implements Filter {
 			resolver.resolve(view, model, new RespWriter(response));
 			return true;
 		}
-		
+
 		@Override
 		public Object getAction() {
 			return invoc.getThis();
+		}
+
+		@Override
+		public String getPermission() {
+			return nameToPermission.get(name);
 		}
 
 		@Override

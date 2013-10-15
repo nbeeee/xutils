@@ -26,16 +26,8 @@ import javax.servlet.ServletException;
 public interface Invocation extends ActionContext{
 
 	Object getAction();
+	
+	String getPermission();
 
-	/**
-	 * 继续处理 action plugin 链
-	 *
-	 * @return the view
-	 *
-	 * @throws ServletException
-	 *             the servlet exception
-	 * @throws IOException
-	 *             Signals that an I/O exception has occurred.
-	 */
 	View proceed() throws ServletException, IOException;
 }

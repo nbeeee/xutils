@@ -80,12 +80,14 @@ public final class Webutil implements Checker<Accessor> {
 	}
 
 	public static void preventCaching(HttpServletResponse response) {
-		// HTTP 1.0 header
-		// response.setHeader("Pragma", "no-cache");
-		// response.setDateHeader("Expires", 1L);
-		// HTTP 1.1 header: "no-cache" is the standard value,
-		// "no-store" is necessary to prevent caching on FireFox.
-		response.setHeader("Cache-Control", "must-revalidate,no-cache,no-store");
+		// Set to expire far in the past.  
+		response.setDateHeader("Expires", 0);
+		// Set standard HTTP/1.1 no-cache headers.  
+		response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+		// Set IE extended HTTP/1.1 no-cache headers (use addHeader).  
+		response.addHeader("Cache-Control", "post-check=0, pre-check=0");  
+		// Set standard HTTP/1.0 no-cache header.
+		response.setHeader("Pragma", "no-cache");
 	}
 
 	/**
@@ -108,8 +110,7 @@ public final class Webutil implements Checker<Accessor> {
 	public static void applyCacheSeconds(HttpServletResponse response, int seconds, boolean mustRevalidate) {
 		if (seconds > 0) {
 			// HTTP 1.0 header --- useExpiresHeader
-			// response.setDateHeader(HEADER_EXPIRES, System.currentTimeMillis()
-			// + pageCacheSecond * 1000L);
+			response.setDateHeader("Expires", System.currentTimeMillis() + seconds * 1000L);
 			// HTTP 1.1 header --- useCacheControlHeader
 			response.setHeader("Cache-Control", (mustRevalidate ? "must-revalidate,max-age=" : "max-age=") + seconds);
 		} else if (seconds == 0)

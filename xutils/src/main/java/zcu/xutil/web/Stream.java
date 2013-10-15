@@ -90,23 +90,6 @@ public final class Stream implements View {
 		return this;
 	}
 
-	/**
-	 * Cache page.
-	 * 
-	 * @param seconds
-	 *            the (positive) number of seconds into the future that the
-	 *            response should be cacheable for; 0 to prevent caching; and a
-	 *            negative value to leave caching to the client.
-	 * 
-	 * @return the stream
-	 * 
-	 * 
-	 */
-	public Stream cachePage(int seconds) {
-		this.cacheSeconds = seconds;
-		return this;
-	}
-
 	@Override
 	public void handle(WebContext vc) throws ServletException, IOException {
 		HttpServletResponse resp = vc.getResponse();

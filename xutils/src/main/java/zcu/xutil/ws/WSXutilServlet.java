@@ -55,7 +55,6 @@ public class WSXutilServlet extends HttpServlet {
 			l.createAdapter(entry.getName(), Objutil.format(pattern, entry.getName()), endpoint);
 		}
 		delegate = new WSServletDelegate(l, sc);
-		sc.log(getServletName() + " inited. class: " + getClass().getName());
 	}
 
 
