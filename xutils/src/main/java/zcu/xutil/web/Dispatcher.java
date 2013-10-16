@@ -47,7 +47,6 @@ import static zcu.xutil.Constants.*;
  * 
  */
 public final class Dispatcher implements Filter {
-	static final String extension = notEmpty(systring(XUTILS_WEB_ACTION_EXTENSION, ".do"), XUTILS_WEB_ACTION_EXTENSION);
 	static final String objectsKey = notEmpty(systring(XUTILS_WEB_OBJECTS_KEY, "xwo"), XUTILS_WEB_OBJECTS_KEY);
 
 	private Resolver[] resolvers;
@@ -70,11 +69,11 @@ public final class Dispatcher implements Filter {
 		len = (res = context.getProviders(Action.class)).size();
 		nameToPermission = new HashMap<String, String>(len);
 		while (--len >= 0) {
-			String name = res.get(len).getName();
-			int i = name.indexOf(':');
-			dupChkPut(nameToPermission, name.substring(0, i), name.substring(i+1));
+			String s = res.get(len).getName();
+			int i = s.indexOf('/');
+			dupChkPut(nameToPermission, i < 0 ? s : s.substring(0, i), i < 0 ? "" : s.substring(i + 1));
 		}
-		Logger.LOG.info("inited: resolver={}  actions={}",resolverNames,nameToPermission);
+		Logger.LOG.info("inited: resolver={}  actions={}", resolverNames, nameToPermission);
 	}
 
 	@Override
