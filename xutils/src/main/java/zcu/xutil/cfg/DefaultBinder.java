@@ -33,9 +33,9 @@ import org.xml.sax.XMLReader;
 
 import zcu.xutil.Constants;
 import zcu.xutil.Logger;
-import zcu.xutil.Objutil;
 import zcu.xutil.Replace;
 import zcu.xutil.XutilRuntimeException;
+import static zcu.xutil.Objutil.*;
 
 /**
  * 
@@ -55,7 +55,7 @@ public final class DefaultBinder implements Binder, Replace {
 
 	public DefaultBinder(String name, Context parent, ClassLoader cl) {
 		context = new CtxImpl(name, parent);
-		loader = cl == null ? Objutil.contextLoader() : cl;
+		loader = cl == null ? contextLoader() : cl;
 	}
 
 	@Override
@@ -69,35 +69,29 @@ public final class DefaultBinder implements Binder, Replace {
 	}
 
 	public void batch(String configs, URL urlcontext) {
-		List<String> list = Objutil.split(configs, ',');
+		List<String> list = split(configs, ',');
 		for (int i = 0, len = list.size(); i < len; i++) {
 			String s = list.get(i).trim();
 			if (s.startsWith("path:"))
-				bind(Objutil.notNull(loader.getResource(s.substring("path:".length())), "{} not found.", s));
+				bind(notNull(loader.getResource(s.substring("path:".length())), "{} not found.", s));
 			else {
-				Class<?> cls;
 				try {
-					cls = loader.loadClass(s);
-				} catch (ClassNotFoundException e) {
-					cls = null;
-				}
-				if (cls != null) {
+					Class<?> cls = loader.loadClass(s);
 					Logger.LOG.info("{} binding begin......", cls);
 					try {
 						((Config) cls.newInstance()).config(this);
 					} catch (Exception e) {
-						Logger.LOG.warn("{} bind fail.", e, cls);
-						throw Objutil.rethrow(e);
+						throw rethrow(e);
 					}
 					Logger.LOG.info("{} binding end......", cls);
-					continue;
-				}
-				try {
-					URL url = new URL(urlcontext == null ? new File(Objutil.systring(Constants.XUTILS_HOME)).toURI()
-							.toURL() : urlcontext, s);
-					bind(url);
-				} catch (MalformedURLException e) {
-					throw new XutilRuntimeException(e);
+				} catch (ClassNotFoundException cne) {
+					try {
+						if (urlcontext == null)
+							urlcontext = new File(systring(Constants.XUTILS_HOME)).toURI().toURL();
+						bind(new URL(urlcontext, s));
+					} catch (MalformedURLException e) {
+						throw new XutilRuntimeException(e);
+					}
 				}
 			}
 		}
@@ -105,12 +99,12 @@ public final class DefaultBinder implements Binder, Replace {
 
 	@Override
 	public void bind(URL url) {
-		String s = url.getPath();
-		s = s.substring(s.indexOf('.') + 1);
+		String ext = url.getPath();
+		ext = ext.substring(ext.lastIndexOf('.') + 1);
 		InputStream in = null;
 		try {
 			Logger.LOG.info("{} binding begin......", url);
-			if (s.equals("xml")) {
+			if (ext.equals("xml")) {
 				SAXParserFactory factory = SAXParserFactory.newInstance();
 				factory.setValidating(true);
 				factory.setNamespaceAware(true);
@@ -121,16 +115,15 @@ public final class DefaultBinder implements Binder, Replace {
 				reader.setErrorHandler(handler);
 				reader.parse(new InputSource(in = url.openStream()));
 			} else {
-				ScriptEngineManager engineManger = new ScriptEngineManager(loader);
-				ScriptEngine engine = engineManger.getEngineByExtension(s);
+				ScriptEngineManager mgr = new ScriptEngineManager(loader);
+				ScriptEngine engine = notNull(mgr.getEngineByExtension(ext), "not found engine: {}", ext);
 				((Config) engine.eval(new InputStreamReader(in = url.openStream()))).config(this);
 			}
 			Logger.LOG.info("{} binding end......", url);
 		} catch (Exception e) {
-			Logger.LOG.warn("{} bind fail.", e, url);
-			throw Objutil.rethrow(e);
+			throw rethrow(e);
 		} finally {
-			Objutil.closeQuietly(in);
+			closeQuietly(in);
 		}
 	}
 
@@ -156,7 +149,7 @@ public final class DefaultBinder implements Binder, Replace {
 	public void setEnv(String name, Object value) {
 		if (environ == null)
 			environ = new HashMap<String, Object>();
-		Objutil.validate(environ.put(name, value)==null, "duplicated name: {}",name);
+		validate(environ.put(name, value) == null, "duplicated name: {}", name);
 	}
 
 	@Override
@@ -172,25 +165,19 @@ public final class DefaultBinder implements Binder, Replace {
 	void setPlaceholder(String name, String value) {
 		if (placeholder == null)
 			placeholder = new HashMap<String, String>();
-		Objutil.validate(placeholder.put(name, value)==null, "duplicated name: {}",name);
+		validate(placeholder.put(name, value) == null, "duplicated name: {}", name);
 	}
 
 	@Override
 	public String replace(String name) {
 		String ret = placeholder == null ? null : placeholder.get(name);
-		return ret != null ? ret : Objutil.systring(name);
+		return ret != null ? ret : systring(name);
 	}
 
 	public Context startup() {
-		try {
-			context.startup();
-			environ = null;
-			placeholder = null;
-			return context;
-		} catch (RuntimeException e) {
-			context.destroy();
-			Logger.LOG.info("startup fail.", e);
-			throw e;
-		}
+		context.startup();
+		environ = null;
+		placeholder = null;
+		return context;
 	}
 }

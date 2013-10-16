@@ -35,7 +35,7 @@ import zcu.xutil.cfg.DefaultBinder;
 public class ContextListener implements ServletContextListener {
 	static URL getConfig(ServletContext sc) {
 		try {
-			URL url = sc.getResource("/xutils-webapp.xml");
+			URL url = sc.getResource("/WEB-INF/xutils-webapp.xml");
 			return url != null ? url : Objutil.contextLoader().getResource("xutils-webapp.xml");
 		} catch (MalformedURLException e) {
 			throw new XutilRuntimeException(e);

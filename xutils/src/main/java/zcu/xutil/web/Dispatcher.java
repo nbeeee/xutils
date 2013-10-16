@@ -51,7 +51,7 @@ public final class Dispatcher implements Filter {
 
 	private Resolver[] resolvers;
 	private String[] resolverNames;
-	Map<String, String> nameToPermission;
+	Map<String, String[]> namesMap;
 	ServletContext servletCtx;
 	Context context;
 
@@ -67,22 +67,22 @@ public final class Dispatcher implements Filter {
 			resolvers[len] = (Resolver) res.get(len).instance();
 		}
 		len = (res = context.getProviders(Action.class)).size();
-		nameToPermission = new HashMap<String, String>(len);
+		namesMap = new HashMap<String, String[]>(len);
 		while (--len >= 0) {
-			String beanName = res.get(len).getName();
-			int i = beanName.indexOf('/');
-			String key = i < 0 ? beanName : beanName.substring(0, i);
-			validate(!key.isEmpty() && !nameToPermission.containsKey(key), "invalid name: {}", beanName);
-			nameToPermission.put(key, i < 0 ? null : beanName.substring(i + 1));
+			String bean = res.get(len).getName();
+			int i = bean.indexOf('/');
+			String key = notEmpty(i < 0 ? bean : bean.substring(0, i), "invalid action beanName.");
+			String perm = i < 0 ? null : bean.substring(i+1);
+			validate(namesMap.put(key, new String[]{bean,perm})==null, "duplicated name: {}",bean);
 		}
-		Logger.LOG.info("inited: resolver={}  actions={}", resolverNames, nameToPermission);
+		Logger.LOG.info("inited: resolver={}  actions={}", resolverNames, namesMap);
 	}
 
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException,
 			ServletException {
 		String name = Webutil.getFilename((HttpServletRequest) req);
-		if (nameToPermission.containsKey(name) || getResolver(name) != null)
+		if (namesMap.containsKey(name) || getResolver(name) != null)
 			new Executor((HttpServletRequest) req, (HttpServletResponse) resp).forward(name, null);
 		else
 			chain.doFilter(req, resp);
@@ -151,14 +151,14 @@ public final class Dispatcher implements Filter {
 
 		@Override
 		boolean forward(String view, Map<String, Object> model) throws ServletException, IOException {
-			if (nameToPermission.containsKey(view)) {
+			if (namesMap.containsKey(view)) {
 				Objutil.validate(!view.equals(name), "repeat action: {}", view);
 				name = view;
 				if (model != null) {
 					for (Entry<String, Object> entry : model.entrySet())
 						request.setAttribute(entry.getKey(), entry.getValue());
 				}
-				View v = ((Action) context.getBean(view)).execute(this);
+				View v = ((Action) context.getBean(namesMap.get(view)[0])).execute(this);
 				invoc = null;
 				if (v != null)
 					v.handle(this);
@@ -182,7 +182,7 @@ public final class Dispatcher implements Filter {
 
 		@Override
 		public String getPermission() {
-			return nameToPermission.get(name);
+			return namesMap.get(name)[1];
 		}
 
 		@Override
