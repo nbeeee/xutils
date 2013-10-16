@@ -73,7 +73,7 @@ public final class MvelResolver implements Resolver {
 
 	@Override
 	public void resolve(String view, Map<String, Object> variables, final Writer writer) throws IOException {
-		Objutil.dupChkPut(variables, "t_dir", path);
+		Objutil.validate(variables.put("t_dir", path)==null, "duplicated name: {}","t_dir");
 		TemplateRuntime.execute(getTemplate(view.toLowerCase()), null, new MapVariableResolverFactory(variables), registry, new TemplateOutputStream() {
 			@Override
 			public TemplateOutputStream append(CharSequence s) {

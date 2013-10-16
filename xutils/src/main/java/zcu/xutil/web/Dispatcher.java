@@ -69,9 +69,11 @@ public final class Dispatcher implements Filter {
 		len = (res = context.getProviders(Action.class)).size();
 		nameToPermission = new HashMap<String, String>(len);
 		while (--len >= 0) {
-			String s = res.get(len).getName();
-			int i = s.indexOf('/');
-			dupChkPut(nameToPermission, i < 0 ? s : s.substring(0, i), i < 0 ? "" : s.substring(i + 1));
+			String beanName = res.get(len).getName();
+			int i = beanName.indexOf('/');
+			String key = i < 0 ? beanName : beanName.substring(0, i);
+			validate(!key.isEmpty() && !nameToPermission.containsKey(key), "invalid name: {}", beanName);
+			nameToPermission.put(key, i < 0 ? null : beanName.substring(i + 1));
 		}
 		Logger.LOG.info("inited: resolver={}  actions={}", resolverNames, nameToPermission);
 	}
@@ -167,7 +169,8 @@ public final class Dispatcher implements Filter {
 				return false;
 			if (model == null)
 				model = new HashMap<String, Object>();
-			Objutil.dupChkPut(model, objectsKey, this);
+			validate(!model.containsKey(objectsKey), "duplicated name: {}", objectsKey);
+			model.put(objectsKey, this);
 			resolver.resolve(view, model, new RespWriter(response));
 			return true;
 		}

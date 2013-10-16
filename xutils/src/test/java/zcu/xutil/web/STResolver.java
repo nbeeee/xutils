@@ -78,7 +78,7 @@ public final class STResolver implements Resolver {
 	public void resolve(String view, Map<String, Object> variables,Writer out) throws IOException {
 		int i = view.lastIndexOf('.');
 		StringTemplate template = group.getInstanceOf(view.substring(0, i));
-		Objutil.dupChkPut(variables, "_dir", dir.getPath());
+		Objutil.validate(variables.put("_dir", dir.getPath())==null, "duplicated name: {}","_dir");
 		template.setAttributes(variables);
 		StringTemplateWriter wr;
 		if (useGroupWriter)

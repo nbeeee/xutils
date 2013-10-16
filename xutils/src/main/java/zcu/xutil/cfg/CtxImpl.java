@@ -36,6 +36,7 @@ import zcu.xutil.Objutil;
  */
 
 final class CtxImpl implements Context {
+	private static final String anonymous = "@";
 	private static volatile int counter = -0x0fffffff;
 
 	private final String ctxName;
@@ -106,13 +107,14 @@ final class CtxImpl implements Context {
 
 	@Override
 	public synchronized List<NProvider> getProviders(Class<?> type) {
-		List<NProvider> ret,parents;
+		List<NProvider> ret, parents;
 		Map<Class, List<NProvider>> cache = cacheRef.get();
 		if (cache == null)
 			cacheRef = new SoftReference<Map<Class, List<NProvider>>>(cache = new HashMap<Class, List<NProvider>>());
 		else if ((ret = cache.get(type)) != null)
 			return ret;
-		final int len =  (parents = parent == null ? Collections.<NProvider>emptyList() : parent.getProviders(type)).size();
+		final int len = (parents = parent == null ? Collections.<NProvider> emptyList() : parent.getProviders(type))
+				.size();
 		ret = new ArrayList<NProvider>();
 		for (int i = 0; i < len; i++) {
 			NProvider p = parents.get(i);
@@ -148,7 +150,7 @@ final class CtxImpl implements Context {
 		List<Bean> ret = new ArrayList<Bean>(len);
 		for (int i = 0; i < len; i++) {
 			Bean bean = list.get(i);
-			if (bean.getName().charAt(0) == '@')
+			if (bean.getName().startsWith(anonymous))
 				beanmap.remove(bean.getName());
 			else
 				ret.add(bean);
@@ -172,10 +174,10 @@ final class CtxImpl implements Context {
 
 	LifeCtrl put(boolean cache, String name, Provider p) {
 		if (Objutil.isEmpty(name))
-			name = "@" + counter--;
+			name = anonymous + counter--;
 		Bean bean = !cache || p instanceof Instance || p instanceof Only ? new Comp(name, p, this) : new Only(name, p,
 				this);
-		Objutil.dupChkPut(beanmap, name, bean);
+		Objutil.validate(beanmap.put(name, bean) == null,"duplicated name: {}",name);
 		beanlist.add(bean);
 		return bean.initor;
 	}

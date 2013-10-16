@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import zcu.xutil.Objutil;
 import zcu.xutil.msg.GroupService;
+import zcu.xutil.utils.ProxyHandler;
 import zcu.xutil.utils.Util;
 
 public final class Handler implements ThreadFactory {
@@ -42,9 +43,10 @@ public final class Handler implements ThreadFactory {
 		this.executor = new ThreadPoolExecutor(1, maxPoolSize, 20, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
 				this);
 	}
+
 	@Override
 	public Thread newThread(Runnable r) {
-		return Util.newThread(r,  "MsgHandler-" + counter++, false);
+		return Util.newThread(r, "MsgHandler-" + counter++, false);
 	}
 
 	void shutdown() {
@@ -60,17 +62,16 @@ public final class Handler implements ThreadFactory {
 		Map<String, ServiceObject> mp = new HashMap<String, ServiceObject>();
 		for (Map.Entry<String, ? extends GroupService> e : groupServices.entrySet()) {
 			String serviceName = e.getKey().intern();
-			Objutil.dupChkPut(mp,serviceName, new GS(this, e.getValue()));
+			Objutil.validate(mp.put(serviceName, new GS(this, e.getValue())) == null, "duplicated name: {}",
+					serviceName);
 		}
 		for (Remote obj : interfaceservice) {
 			int size = mp.size();
-			for (Class var = obj.getClass(); var != Object.class; var = var.getSuperclass()) {
-				for (Class<?> itf : var.getInterfaces()) {
-					if (Remote.class.isAssignableFrom(itf))
-						Objutil.dupChkPut(mp,itf.getName(), new MS(this, itf, obj));
-				}
+			for (Class itf :ProxyHandler.getInterfaces(obj.getClass())) {
+				if (Remote.class.isAssignableFrom(itf))
+					Objutil.validate(mp.put(itf.getName(), new MS(this, itf, obj)) == null, "duplicated name: {}", itf);
 			}
-			Objutil.validate(size < mp.size(), "{}: not found interface extend Remote.", obj.getClass());
+			Objutil.validate(size < mp.size(), "{}: not found interface extend Remote.", obj);
 		}
 		Objutil.validate(mp.size() > 0, "services is empty");
 		executor.setCorePoolSize(CORE_POOL_SIZE);
@@ -85,7 +86,8 @@ public final class Handler implements ThreadFactory {
 			super(h);
 			this.service = _service;
 			for (Method m : iface.getMethods()) {
-				Objutil.dupChkPut(maps,Util.signature(m.getName(),m.getParameterTypes()), m);
+				Objutil.validate(maps.put(Util.signature(m.getName(), m.getParameterTypes()), m) == null,
+						"duplicated name: {}", m);
 				m.setAccessible(true);
 			}
 		}

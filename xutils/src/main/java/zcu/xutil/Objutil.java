@@ -99,11 +99,6 @@ public class Objutil implements Replace {
 		return s;
 	}
 
-	public static <K, V> void dupChkPut(Map<K, V> map, K key, V value) {
-		if (map.put(key, value) != null)
-			throw new IllegalStateException("duplicated name: " + key);
-	}
-
 	public static boolean equal(Object a, Object b) {
 		return a == b ? true : (a == null ? false : a.equals(b));
 	}

@@ -156,7 +156,7 @@ public final class DefaultBinder implements Binder, Replace {
 	public void setEnv(String name, Object value) {
 		if (environ == null)
 			environ = new HashMap<String, Object>();
-		Objutil.dupChkPut(environ, name, value);
+		Objutil.validate(environ.put(name, value)==null, "duplicated name: {}",name);
 	}
 
 	@Override
@@ -172,7 +172,7 @@ public final class DefaultBinder implements Binder, Replace {
 	void setPlaceholder(String name, String value) {
 		if (placeholder == null)
 			placeholder = new HashMap<String, String>();
-		Objutil.dupChkPut(placeholder, name, value);
+		Objutil.validate(placeholder.put(name, value)==null, "duplicated name: {}",name);
 	}
 
 	@Override

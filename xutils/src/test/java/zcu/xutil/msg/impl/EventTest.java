@@ -1,6 +1,7 @@
 ﻿package zcu.xutil.msg.impl;
 
 import static org.junit.Assert.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -12,6 +13,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +25,7 @@ import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.XutilRuntimeException;
 import zcu.xutil.msg.DMCache;
+import zcu.xutil.msg.GroupService;
 import zcu.xutil.msg.DMCache.Alias;
 import zcu.xutil.msg.impl.Event;
 import zcu.xutil.sql.DBType;
@@ -410,8 +413,17 @@ public class EventTest implements Serializable {
 
 		Long apply(String s);
 	}
-
+	interface AAA extends java.rmi.Remote{
+		
+	}
+	interface BBB extends AAA{
+		
+	}
 	public static void main(String[] args) {
+		Handler h = new Handler(1,null);
+				
+		Map map =h.initiate(Collections.EMPTY_MAP, new java.rmi.Remote[]{new AAA(){},new BBB(){}});
+		System.out.println(map);
 		new Event();
 		System.out.println(deserialize(serialize(NULL)));
 		byte[] bytes;
