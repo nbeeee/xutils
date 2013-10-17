@@ -12,11 +12,28 @@ import javax.servlet.ServletException;
 public class ResumeAction implements Action {
 	private File rootdir;
 	public String filename;
-	@Validator(value = "(?i)true|false", message = "resumeAction.inline")
+	
 	public boolean inline;
 
 	public void setRootDir(File directory) {
 		this.rootdir = directory;
+	}
+
+	public String getFilename() {
+		return filename;
+	}
+
+	public void setFilename(String filename) {
+		this.filename = filename;
+	}
+	
+	@Validator(value = "(?i)true|false", message = "resumeAction.inline")
+	public boolean getInline() {
+		return inline;
+	}
+
+	public void setInline(boolean inline) {
+		this.inline = inline;
 	}
 
 	public File getRootDir() {

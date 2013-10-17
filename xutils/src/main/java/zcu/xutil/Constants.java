@@ -18,8 +18,6 @@ public interface Constants {
 	public static final String XUTILS_WEB_PATTERNS_CACHE = "xutils.web.patterns.cache";
 	public static final String XUTILS_WEB_ACTIONS_CACHE = "xutils.web.actions.cache";
 	public static final String XUTILS_WEB_BUNDLE_NAME = "xutils.web.bundle.name";
-	public static final String XUTILS_WEB_ACTION_EXTENSION = "xutils.web.action.extension";
-	public static final String XUTILS_WEB_OBJECTS_KEY = "xutils.web.objects.key";
 
 	public static final String XUTILS_MSG_CHANNEL_ID = "xutils.msg.channel.id";
 	public static final String XUTILS_MSG_SERVERSTAMP = "xutils.msg.serverstamp";

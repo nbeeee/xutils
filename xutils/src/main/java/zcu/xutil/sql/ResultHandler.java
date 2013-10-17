@@ -107,6 +107,6 @@ public abstract class ResultHandler<T> implements Handler<T>{
 		};
 	}
 	protected static Map<String,Accessor> getAllAccessor(Class clazz){
-		return DBTool.CHK.getAllAccessor(clazz);
+		return DBTool.getAllAccessor(clazz);
 	}
 }

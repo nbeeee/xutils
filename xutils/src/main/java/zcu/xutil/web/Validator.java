@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 @Retention(RUNTIME)
-@Target(ElementType.FIELD)
+@Target(ElementType.METHOD)
 public @interface Validator {
 	/**
 	 * mapping request parameter name.

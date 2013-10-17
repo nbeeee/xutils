@@ -61,11 +61,7 @@ public class AccessField implements Accessor {
 	public Class<?> getType() {
 		return field.getType();
 	}
-	@Override
-	public boolean isWritable() {
-		int mods = field.getModifiers();
-		return (mods & Modifier.STATIC) == 0 || (mods & Modifier.FINAL) == 0;
-	}
+
 	@Override
 	public <T extends Annotation> T getAnnotation(Class<T> annoType) {
 		return field.getAnnotation(annoType);

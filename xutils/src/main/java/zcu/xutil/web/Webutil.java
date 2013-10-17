@@ -16,7 +16,6 @@
 package zcu.xutil.web;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,16 +31,13 @@ import javax.xml.ws.handler.MessageContext;
 
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
-import zcu.xutil.XutilRuntimeException;
 import zcu.xutil.cfg.CFG;
 import zcu.xutil.cfg.Context;
-import zcu.xutil.utils.AccessField;
+import zcu.xutil.utils.AccessProperty;
 import zcu.xutil.utils.Accessor;
-import zcu.xutil.utils.Checker;
 import zcu.xutil.utils.Convertor;
 import zcu.xutil.utils.LRUCache;
 import zcu.xutil.utils.Util;
-import zcu.xutil.utils.XResource;
 import static zcu.xutil.Constants.*;
 
 /**
@@ -49,7 +45,7 @@ import static zcu.xutil.Constants.*;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 
-public final class Webutil implements Checker<Accessor> {
+public final class Webutil {
 
 	/**
 	 * Standard Servlet 2.3+ spec request attributes for include URI and paths.
@@ -80,12 +76,12 @@ public final class Webutil implements Checker<Accessor> {
 	}
 
 	public static void preventCaching(HttpServletResponse response) {
-		// Set to expire far in the past.  
+		// Set to expire far in the past.
 		response.setDateHeader("Expires", 0);
-		// Set standard HTTP/1.1 no-cache headers.  
+		// Set standard HTTP/1.1 no-cache headers.
 		response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-		// Set IE extended HTTP/1.1 no-cache headers (use addHeader).  
-		response.addHeader("Cache-Control", "post-check=0, pre-check=0");  
+		// Set IE extended HTTP/1.1 no-cache headers (use addHeader).
+		response.addHeader("Cache-Control", "post-check=0, pre-check=0");
 		// Set standard HTTP/1.0 no-cache header.
 		response.setHeader("Pragma", "no-cache");
 	}
@@ -140,7 +136,6 @@ public final class Webutil implements Checker<Accessor> {
 		return injector.doInject(request, obj);
 	}
 
-	@Validator
 	private final Validator defaults;
 	private final Convertor convertor;
 	private final ResourceBundle bundle;
@@ -151,12 +146,9 @@ public final class Webutil implements Checker<Accessor> {
 		convertor = new Convertor();
 		patterns = Util.lruMap(Objutil.systring(XUTILS_WEB_PATTERNS_CACHE, 95), null);
 		accessors = new LRUCache<Class, Map<String, Accessor>>(Objutil.systring(XUTILS_WEB_ACTIONS_CACHE, 95), null);
-		bundle = ResourceBundle.getBundle(Objutil.systring(XUTILS_WEB_BUNDLE_NAME, XResource.class.getName()));
-		try {
-			defaults = Webutil.class.getDeclaredField("defaults").getAnnotation(Validator.class);
-		} catch (NoSuchFieldException e) {
-			throw new XutilRuntimeException(e);
-		}
+		String s = Objutil.systring(XUTILS_WEB_BUNDLE_NAME);
+		bundle = s == null ? null : ResourceBundle.getBundle(s);
+		defaults = Util.defaultAnnotation(Validator.class);
 	}
 
 	private synchronized Pattern getPattern(String pattern) {
@@ -170,22 +162,18 @@ public final class Webutil implements Checker<Accessor> {
 		Map<String, Accessor> result = accessors.get(clazz);
 		if (result != null)
 			return result;
-		result = AccessField.build(clazz, this, true);
+		result = AccessProperty.build(clazz, null);
 		return Objutil.ifNull(accessors.putIfAbsent(clazz, result), result);
 	}
 
-	@Override
-	public boolean checks(Accessor accessor) {
-		return (accessor.getModifiers() & (Modifier.STATIC | Modifier.FINAL)) != 0;
-	}
-
 	private String localMsg(String value) {
-		try {
-			return bundle.getString(value);
-		} catch (MissingResourceException e) {
-			Logger.LOG.info("missing resource.", e);
-			return value;
-		}
+		if (bundle != null)
+			try {
+				return bundle.getString(value);
+			} catch (MissingResourceException e) {
+				Logger.LOG.info("missing resource.", e);
+			}
+		return value;
 	}
 
 	private Map<String, String> doInject(HttpServletRequest request, Object action) {

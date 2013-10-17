@@ -6,9 +6,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -35,14 +38,8 @@ import zcu.xutil.XutilRuntimeException;
 
 public final class Util implements Iterator {
 	public static final String FILE_ENCODING = Objutil.systring("file.encoding", "GBK");
-	public static final ThreadGroup XUTIL_GROUP = new ThreadGroup("xutils") {
-		@Override
-		public void uncaughtException(Thread t, Throwable e) {
-			Logger.LOG.error("uncaught exception in {} (thread group={} )", e, t.getName(), this);
-			super.uncaughtException(t, e);
-		}
-	};
 	private static final Map<String, Format> formatCache = lruMap(11, null);
+	private static final TGP xutilsGroup = new TGP();
 
 	public static String format(String pattern, Object dateOrNumber) {
 		boolean date = dateOrNumber instanceof Date;
@@ -58,6 +55,11 @@ public final class Util implements Iterator {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	public static <T extends Annotation> T defaultAnnotation(Class<T> annotationType) {
+		return (T) Proxy.newProxyInstance(annotationType.getClassLoader(), new Class[] { annotationType }, xutilsGroup);
+	}
+
 	public static Class getSetterType(Method m) {
 		String s = m.getName();
 		if (s.startsWith("set") && s.length() > 3 && m.getReturnType() == Void.TYPE) {
@@ -67,10 +69,6 @@ public final class Util implements Iterator {
 		}
 		return null;
 	}
-
-	// public static int getParamsLen(Method m) {
-	// return getParamTypes(m).length;
-	// }
 
 	public static boolean isSetter(Method m) {
 		return getSetterType(m) != null;
@@ -287,8 +285,12 @@ public final class Util implements Iterator {
 		return new File(sb.toString());
 	}
 
+	public static ThreadGroup getThreadGroup() {
+		return xutilsGroup;
+	}
+
 	public static Thread newThread(Runnable target, String name, boolean daemon) {
-		Thread t = new Thread(XUTIL_GROUP, target, name);
+		Thread t = new Thread(xutilsGroup, target, name);
 		if (t.isDaemon() != daemon)
 			t.setDaemon(daemon);
 		if (t.getPriority() != Thread.NORM_PRIORITY)
@@ -319,6 +321,24 @@ public final class Util implements Iterator {
 				return now;
 		}
 		return Timer.currentMillis;
+	}
+
+	private static class TGP extends ThreadGroup implements InvocationHandler {
+		TGP() {
+			super("xutils");
+		}
+
+		@Override
+		public void uncaughtException(Thread t, Throwable e) {
+			Logger.LOG.error("uncaught exception in {} (thread group={} )", e, t.getName(), this);
+			super.uncaughtException(t, e);
+		}
+
+		@Override
+		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+			Object ret = ProxyHandler.proxyObjectMethod(proxy, method, args);
+			return ret == null ? method.getDefaultValue() : ret;
+		}
 	}
 
 	private static final class Timer extends ScheduledThreadPoolExecutor implements Runnable, ThreadFactory {

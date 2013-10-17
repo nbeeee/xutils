@@ -92,7 +92,7 @@ public final class NpSQL {
 	public Object[] fromBean(Object bean) {
 		int len = paramNames.length;
 		Object[] params = new Object[len];
-		Map<String, Accessor> accessors = DBTool.CHK.getAllAccessor(bean.getClass());
+		Map<String, Accessor> accessors = DBTool.getAllAccessor(bean.getClass());
 		String s;
 		while (--len >= 0) {
 			Accessor accesssor = Objutil.notNull(accessors.get(s = paramNames[len]), s);

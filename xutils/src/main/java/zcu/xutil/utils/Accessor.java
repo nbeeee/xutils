@@ -23,7 +23,6 @@ import java.lang.annotation.Annotation;
 public interface Accessor {
 	String getName();
 	Class<?> getType();
-	boolean isWritable();
 	Object getValue(Object ctx);
 	void setValue(Object ctx, Object value);
 	<T extends Annotation> T getAnnotation(Class<T> annoType);

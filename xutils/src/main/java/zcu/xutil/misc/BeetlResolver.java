@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package zcu.xutil.web;
+package zcu.xutil.misc;
 
 import javax.servlet.ServletContext;
 
-import zcu.xutil.misc.BeeTemplate;
+import zcu.xutil.web.Resolver;
 
 public class BeetlResolver extends BeeTemplate implements Resolver {
 	public BeetlResolver(ServletContext sc) {

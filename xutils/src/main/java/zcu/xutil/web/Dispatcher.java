@@ -39,7 +39,6 @@ import zcu.xutil.cfg.Context;
 import zcu.xutil.cfg.NProvider;
 import zcu.xutil.utils.MethodInvocation;
 import static zcu.xutil.Objutil.*;
-import static zcu.xutil.Constants.*;
 
 /**
  * 
@@ -47,8 +46,6 @@ import static zcu.xutil.Constants.*;
  * 
  */
 public final class Dispatcher implements Filter {
-	static final String objectsKey = notEmpty(systring(XUTILS_WEB_OBJECTS_KEY, "xwo"), XUTILS_WEB_OBJECTS_KEY);
-
 	private Resolver[] resolvers;
 	private String[] resolverNames;
 	Map<String, String[]> namesMap;
@@ -169,8 +166,7 @@ public final class Dispatcher implements Filter {
 				return false;
 			if (model == null)
 				model = new HashMap<String, Object>();
-			validate(!model.containsKey(objectsKey), "duplicated name: {}", objectsKey);
-			model.put(objectsKey, this);
+			validate(model.put("xwbo", this) == null, "reserved key 'xwbo'");
 			resolver.resolve(view, model, new RespWriter(response));
 			return true;
 		}

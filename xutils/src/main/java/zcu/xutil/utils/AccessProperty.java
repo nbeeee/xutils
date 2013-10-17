@@ -17,6 +17,7 @@ package zcu.xutil.utils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -56,7 +57,7 @@ public class AccessProperty implements Accessor {
 		Iterator<Accessor> iter = result.values().iterator();
 		while (iter.hasNext()) {
 			acp = (AccessProperty) iter.next();
-			if (acp.getter == null || (filter != null && filter.checks(acp)))
+			if (!acp.isValid() || (filter != null && filter.checks(acp)))
 				iter.remove();
 			else
 				acp.setAccessible();
@@ -74,30 +75,37 @@ public class AccessProperty implements Accessor {
 		this.getter = get;
 		this.setter = set;
 	}
+
+	boolean isValid() {
+		return getter != null && setter != null && 0 == (Modifier.STATIC & (getter.getModifiers() ^ setter.getModifiers()));
+	}
+
 	@Override
 	public String getName() {
 		return name;
 	}
+
 	@Override
 	public Class<?> getType() {
 		return type;
 	}
-	@Override
-	public boolean isWritable() {
-		return setter != null;
-	}
+
 	@Override
 	public <T extends Annotation> T getAnnotation(Class<T> annoType) {
-		return getter.getAnnotation(annoType);
+		T ret = getter.getAnnotation(annoType);
+		return ret != null ? ret : setter.getAnnotation(annoType);
 	}
+
 	@Override
 	public int getModifiers() {
 		return getter.getModifiers();
 	}
+
 	@Override
 	public Object getValue(Object ctx) {
 		return Util.call(ctx, getter, null);
 	}
+
 	@Override
 	public void setValue(Object ctx, Object value) {
 		Util.call(ctx, setter, new Object[] { value });
@@ -105,7 +113,6 @@ public class AccessProperty implements Accessor {
 
 	private void setAccessible() {
 		getter.setAccessible(true);
-		if (setter != null)
-			setter.setAccessible(true);
+		setter.setAccessible(true);
 	}
 }
