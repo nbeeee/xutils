@@ -37,7 +37,7 @@ import zcu.xutil.Objutil;
 import zcu.xutil.XutilRuntimeException;
 
 public final class Util implements Iterator {
-	public static final String FILE_ENCODING = Objutil.systring("file.encoding", "GBK");
+	public static final String filencode = Objutil.systring("file.encoding", "GBK");
 	private static final Map<String, Format> formatCache = lruMap(11, null);
 	private static final TGP xutilsGroup = new TGP();
 

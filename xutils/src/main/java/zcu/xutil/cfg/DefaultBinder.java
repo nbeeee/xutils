@@ -68,31 +68,26 @@ public final class DefaultBinder implements Binder, Replace {
 		return put(cache, name, aops == null && iface == null ? provider : new ProxyDecorator(iface, provider, aops));
 	}
 
-	public void batch(String configs, URL urlcontext) {
+	public void batch(String configs, URL ctx) {
 		List<String> list = split(configs, ',');
 		for (int i = 0, len = list.size(); i < len; i++) {
 			String s = list.get(i).trim();
 			if (s.startsWith("path:"))
 				bind(notNull(loader.getResource(s.substring("path:".length())), "{} not found.", s));
-			else {
+			else if (loader.getResource(s.replace('.', '/').concat(".class")) == null)
 				try {
-					Class<?> cls = loader.loadClass(s);
-					Logger.LOG.info("{} binding begin......", cls);
-					try {
-						((Config) cls.newInstance()).config(this);
-					} catch (Exception e) {
-						throw rethrow(e);
-					}
-					Logger.LOG.info("{} binding end......", cls);
-				} catch (ClassNotFoundException cne) {
-					try {
-						if (urlcontext == null)
-							urlcontext = new File(systring(Constants.XUTILS_HOME)).toURI().toURL();
-						bind(new URL(urlcontext, s));
-					} catch (MalformedURLException e) {
-						throw new XutilRuntimeException(e);
-					}
+					bind(new URL(ctx == null ? new File(systring(Constants.XUTILS_HOME)).toURI().toURL() : ctx, s));
+				} catch (MalformedURLException e) {
+					throw new XutilRuntimeException(e);
 				}
+			else {
+				Logger.LOG.info("{} binding begin......", s);
+				try {
+					((Config) loader.loadClass(s).newInstance()).config(this);
+				} catch (Exception e) {
+					throw rethrow(e);
+				}
+				Logger.LOG.info("{} binding end......", s);
 			}
 		}
 	}

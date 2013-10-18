@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import zcu.xutil.XutilRuntimeException;
@@ -11,18 +12,18 @@ import zcu.xutil.XutilRuntimeException;
 public class Base64 {
 	private static final byte[] charOf, byteOf;
 	static {
-		byte[] CtoB = byteOf= new byte[128], BtoC = charOf =new byte[64];
+		byte[] CtoB = byteOf = new byte[128], BtoC = charOf = new byte[64];
 		int i = 0;
 		do
 			BtoC[i] = (byte) (i < 26 ? i + 'A' : (i < 52 ? i - 26 + 'a' : i - 52 + '0'));
-		while(++i < 62);
+		while (++i < 62);
 		BtoC[62] = '+';
 		BtoC[63] = '/';
 		Arrays.fill(CtoB, (byte) -1);
 		i = 0;
 		do
 			CtoB[BtoC[i]] = (byte) i;
-		while(++i < 64);
+		while (++i < 64);
 	}
 	private final OutputStream out;
 	private final boolean linefeed;
@@ -153,5 +154,9 @@ public class Base64 {
 		while ((size = in.read(buf)) > 0)
 			base64.encode(buf, 0, size);
 		base64.doFinal();
+	}
+
+	public static StringBuilder minencode(String src, StringBuilder out) {
+		return out.append("=?UTF-8?B?").append(encode(src.getBytes(Charset.forName("UTF-8")), false)).append("?=");
 	}
 }

@@ -16,6 +16,7 @@
 package zcu.xutil.msg.impl;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 import javax.sql.DataSource;
 
@@ -78,13 +79,7 @@ public class HttpBrokerFactory  {
 	}
 
 	protected String getCredentials() {
-		if (Objutil.isEmpty(password))
-			return null;
-		try {
-			return "Basic " + Base64.encode((user + ":" + password).getBytes("UTF-8"), false);
-		} catch (UnsupportedEncodingException e) {
-			throw new XutilRuntimeException(e);
-		}
+		return Objutil.isEmpty(password) ? null : "Basic " + Base64.encode((user + ":" + password).getBytes(Charset.forName("UTF-8")), false);
 	}
 
 	public SimpleBroker getObject() {

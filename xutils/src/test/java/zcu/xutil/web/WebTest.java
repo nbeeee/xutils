@@ -39,34 +39,6 @@ public class WebTest implements Config {
 
 	@Test
 	public void testRangePaser() {
-		long[] pos = Stream.parseRange("bytes=-1", 200);
-		assertEquals(pos[0], 199);
-		assertEquals(pos[1], 199);
-		pos = Stream.parseRange("bytes=100-", 200);
-		assertEquals(pos[0], 100);
-		assertEquals(pos[1], 199);
-		pos = Stream.parseRange("bytes=100-120", 200);
-		assertEquals(pos[0], 100);
-		assertEquals(pos[1], 120);
-		pos = Stream.parseRange("bytes=100-500", 200);
-		assertEquals(pos[0], 100);
-		assertEquals(pos[1], 199);
-		pos = Stream.parseRange("bytes=400-500", 200);
-		assertTrue(pos != null);
-		Logger.LOG.info("bytes=400-500   {}-{}", pos[0], pos[1]);
-		pos = Stream.parseRange("bytes=-600", 200);
-		assertTrue(pos != null);
-		Logger.LOG.info("bytes=-600   {}-{}", pos[0], pos[1]);
-		pos = Stream.parseRange("bytes=250-", 200);
-		assertTrue(pos != null);
-		Logger.LOG.info("bytes=250-   {}-{}", pos[0], pos[1]);
-		pos = Stream.parseRange("bytes=-0", 200);
-		assertTrue(pos != null);
-		Logger.LOG.info("bytes=-0   {}-{}", pos[0], pos[1]);
-		pos = Stream.parseRange("bytes=120-100", 200);
-		assertTrue(pos == null);
-		pos = Stream.parseRange("bytes=-120-100", 200);
-		assertTrue(pos == null);
 		String str;
 
 		str = UrlBuilder.encode(

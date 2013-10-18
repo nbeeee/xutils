@@ -104,13 +104,14 @@ public final class Webutil {
 	 *            only necessary for controllers with last-modified support)
 	 */
 	public static void applyCacheSeconds(HttpServletResponse response, int seconds, boolean mustRevalidate) {
-		if (seconds > 0) {
+		if (seconds == 0) 
+			preventCaching(response);
+		else if(seconds > 0){
 			// HTTP 1.0 header --- useExpiresHeader
 			response.setDateHeader("Expires", System.currentTimeMillis() + seconds * 1000L);
 			// HTTP 1.1 header --- useCacheControlHeader
 			response.setHeader("Cache-Control", (mustRevalidate ? "must-revalidate,max-age=" : "max-age=") + seconds);
-		} else if (seconds == 0)
-			preventCaching(response);
+		}  
 	}
 
 	static final String XUTILS_WEBAPP_CONTEXT = "xutils.webapp.context";

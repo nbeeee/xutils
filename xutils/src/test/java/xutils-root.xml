@@ -2,6 +2,7 @@
 <!DOCTYPE beans PUBLIC "-//XUTILS//DTD CONFIG//EN" "xutils-config.dtd">
 <beans>
 	<import>testScript.js</import>
+	<import>zcu.xutil.cfg.RootConfig</import>
 	<bean id="h2ds" class="zcu.xutil.txm.SmartDataSource">
 		<arg>
 			<bean class="zcu.xutil.sql.MiniDataSource" destroy="destroy">

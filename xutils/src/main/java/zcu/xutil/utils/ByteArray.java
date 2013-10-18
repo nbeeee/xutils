@@ -19,7 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 public final class ByteArray extends OutputStream {
 	public static InputStream toStream(byte buf[]) {
@@ -142,7 +142,7 @@ public final class ByteArray extends OutputStream {
 		return new String(buf, 0, count);
 	}
 
-	public String toString(String enc) throws UnsupportedEncodingException {
-		return new String(buf, 0, count, enc);
+	public String toString(String enc) {
+		return new String(buf, 0, count, Charset.forName(enc));
 	}
 }
