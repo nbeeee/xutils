@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import zcu.xutil.DisposeManager;
 import zcu.xutil.Objutil;
@@ -37,7 +38,7 @@ import zcu.xutil.Objutil;
 
 final class CtxImpl implements Context {
 	private static final String anonymous = "@";
-	private static volatile int counter = -0x0fffffff;
+	private static final AtomicInteger counter = new AtomicInteger(-0x0fffffff);
 
 	private final String ctxName;
 	private final Context parent;
@@ -174,7 +175,7 @@ final class CtxImpl implements Context {
 
 	LifeCtrl put(boolean cache, String name, Provider p) {
 		if (Objutil.isEmpty(name))
-			name = anonymous + counter--;
+			name = anonymous + counter.getAndDecrement();
 		Bean bean = !cache || p instanceof Instance || p instanceof Only ? new Comp(name, p, this) : new Only(name, p,
 				this);
 		Objutil.validate(beanmap.put(name, bean) == null,"duplicated name: {}",name);

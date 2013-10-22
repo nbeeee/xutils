@@ -1,4 +1,4 @@
-package zcu.xutil.web;
+package zcu.xutil.misc;
 
 import java.io.IOException;
 
@@ -8,7 +8,11 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authz.UnauthenticatedException;
 import org.apache.shiro.subject.Subject;
+
 import zcu.xutil.Objutil;
+import zcu.xutil.web.Invocation;
+import zcu.xutil.web.Plugin;
+import zcu.xutil.web.View;
 
 public class ShiroPlugin extends Plugin {
 	private String unauthorizedUrl;

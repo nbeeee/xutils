@@ -24,6 +24,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import zcu.xutil.Objutil;
 import zcu.xutil.msg.GroupService;
@@ -32,7 +33,7 @@ import zcu.xutil.utils.Util;
 
 public final class Handler implements ThreadFactory {
 	private static final int CORE_POOL_SIZE = 8;
-	private static volatile int counter;
+	private static final AtomicInteger counter = new AtomicInteger();
 	final ThreadPoolExecutor executor;
 	final EventDao eventDao;
 
@@ -46,7 +47,7 @@ public final class Handler implements ThreadFactory {
 
 	@Override
 	public Thread newThread(Runnable r) {
-		return Util.newThread(r, "MsgHandler-" + counter++, false);
+		return Util.newThread(r, "MsgHandler-" + counter.getAndIncrement(), false);
 	}
 
 	void shutdown() {
