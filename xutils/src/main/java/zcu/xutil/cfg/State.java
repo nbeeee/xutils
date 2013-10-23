@@ -154,6 +154,6 @@ public final class State {
 	
 	private static void exception(Class clazz,String method,Object[] params){
 		throw new IllegalArgumentException( Objutil.append(
-				new StringBuilder(clazz.getName()).append(" can't match: ").append(method), params).toString());
+				new StringBuilder(clazz.getName()).append(" can't match: ").append(method), params==null ? EMPTY_PARAMETERS : params ).toString());
 	}
 }
