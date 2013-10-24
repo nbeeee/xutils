@@ -43,7 +43,6 @@ public final class DisposeManager implements Runnable, Comparator<Entry> {
 		}
 	}
 
-	@SuppressWarnings("restriction")
 	private static void install(final String signal) {
 		new sun.misc.SignalHandler() {
 			private final sun.misc.SignalHandler old = sun.misc.Signal.handle(new sun.misc.Signal(signal), this);
