@@ -34,8 +34,8 @@ import static zcu.xutil.Constants.*;
  * xutils.path 格式: path1|path2|path3 以 "/*" 结束的path表示该目录下的所有 jar 或 zip 文件, 以
  * "/**" 结束的path表示该目录下的所有 jar 或 zip 文件，包括子目录,如:<br>
  * xutils.path=${jetty.home}/lib/**|${xutils.home}/classes<br>
- *
- *
+ * 
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public final class PathBuilder {
@@ -94,8 +94,8 @@ public final class PathBuilder {
 			(i > 0 ? cp.append(File.pathSeparatorChar) : cp).append(elements.get(i).getPath());
 		return cp.toString();
 	}
-	
-	public URL[] getUrls(){
+
+	public URL[] getUrls() {
 		return getUrls(0);
 	}
 
@@ -114,10 +114,8 @@ public final class PathBuilder {
 		if (size > 1 && ((String[]) params[0]).length == 0)
 			params[0] = list.subList(1, size).toArray(new String[size - 1]);
 		if (mainClass.equals(PathBuilder.class.getName())) {
-			if (Objutil.systring(XUTILS_DEBUG) != null) {
-				for (Map.Entry e : Objutil.properties().entrySet())
-					Objutil.log(PathBuilder.class, "key=[{}],value=[{}]", null, e.getKey(), e.getValue());
-			}
+			for (Map.Entry e : Objutil.properties().entrySet())
+				Objutil.log(PathBuilder.class, "key=[{}],value=[{}]", null, e.getKey(), e.getValue());
 			System.exit(0);
 		}
 		Thread thread = Thread.currentThread();

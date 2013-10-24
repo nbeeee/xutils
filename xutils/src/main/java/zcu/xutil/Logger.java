@@ -26,7 +26,6 @@ import static zcu.xutil.Constants.*;
 
 public abstract class Logger {
 	protected static final int DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3;
-	protected static final boolean xdebug = Objutil.systring(XUTILS_DEBUG) != null;
 	public static final Logger LOG = JULF.julf;
 
 	public static Logger getLogger(Class clazz) {
@@ -206,7 +205,7 @@ public abstract class Logger {
 
 		@Override
 		protected boolean isLogable(int level) {
-			return logger == null ? (xdebug || level >= INFO) : logger.isLogable(level);
+			return logger == null || logger.isLogable(level);
 		}
 
 		@Override
@@ -225,8 +224,6 @@ public abstract class Logger {
 
 		Julog(String name) {
 			logger = java.util.logging.Logger.getLogger(name);
-			if (xdebug)
-				logger.setLevel(Level.FINE);
 		}
 
 		@Override

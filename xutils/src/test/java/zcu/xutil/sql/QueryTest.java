@@ -32,7 +32,6 @@ import zcu.xutil.sql.MiniDataSource;
 import zcu.xutil.sql.Query;
 import zcu.xutil.sql.ResultHandler;
 import zcu.xutil.sql.handl.MapRow;
-import zcu.xutil.utils.Disp;
 import zcu.xutil.utils.Util;
 
 
@@ -128,7 +127,6 @@ public class QueryTest {
 	}
 	@Test
 	public void testBatch() {
-		System.out.println("weakRef size="+Disp.disposeSize());
 		logger.info("========testBatch begin=============");
 		try {
 			if(query.tableExist("t_event")){
@@ -169,7 +167,6 @@ public class QueryTest {
 	}
 	@Test
 	public void testAutoIDBatch() {
-		System.out.println("weakRef size="+Disp.disposeSize());
 		logger.info("========testAutoIDBatch begin=============");
 
 		try {
@@ -212,7 +209,6 @@ public class QueryTest {
 	}
 	@Test
 	public void testIdentityKey() {
-		System.out.println("weakRef size="+Disp.disposeSize());
 		logger.info("========testIdentityKey begin=============");
 
 		try {
@@ -289,7 +285,6 @@ public class QueryTest {
 
 			});
 			logger.info("========testDataTpe end=============");
-			System.out.println("weakRef size="+Disp.disposeSize());
 		} catch (SQLException e) {
 			e.printStackTrace();
 			fail(e.getMessage());

@@ -17,10 +17,10 @@ package zcu.xutil;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.net.InetAddress;
@@ -223,18 +223,15 @@ public class Objutil implements Replace {
 	}
 
 	public static <T extends Map> T loadProps(URL url, T map) {
-		InputStream in = null;
+		boolean xml = url.getPath().endsWith(".xml");
 		try {
-			Reader rd = new InputStreamReader(in = url.openStream());
 			if (map instanceof Properties)
-				((Properties) map).load(rd);
+				ENV.load((Properties) map, url.openStream(), xml);
 			else
-				ENV.env.loadMap(rd, map);
+				ENV.env.loadMap(url.openStream(), map, xml);
 			return map;
 		} catch (IOException e) {
 			throw new XutilRuntimeException(url.toString(), e);
-		} finally {
-			closeQuietly(in);
 		}
 	}
 
@@ -343,21 +340,34 @@ public class Objutil implements Replace {
 		private static final long serialVersionUID = 1L;
 		static final ENV env = new ENV();
 		static {
-			String home = env.getProperty(XUTILS_HOME);
-			File f, file = new File(home, "xutils.properties");
-			if (home == null && !file.exists() && (f = new File("..", "xutils.properties")).exists())
-				file = f;
 			try {
-				env.put(XUTILS_HOME, home = (file = file.getCanonicalFile()).getParent());
+				String home = env.getProperty(XUTILS_HOME);
+				home = home == null ? env.getProperty("user.dir") : new File(home).getCanonicalPath();
+				env.put(XUTILS_HOME, home);
 				if (env.getProperty(XUTILS_LOCALHOST) == null)
 					env.put(XUTILS_LOCALHOST, InetAddress.getLocalHost().getHostName());
+				File file = new File(home, "xutils.xml");
+				boolean xml = file.exists();
+				if (xml || (file = new File(home, "xutils.properties")).exists())
+					load(env, new FileInputStream(file), xml);
 			} catch (IOException e) {
 				throw new XutilRuntimeException(e);
 			}
-			if (file.exists())
-				loadProps(toURL(file), env);
-			log(Objutil.class, "{}={}", null, XUTILS_HOME, home);
+
+			log(Objutil.class, "{}={}", null, XUTILS_HOME, env.getProperty(XUTILS_HOME));
 		}
+
+		static void load(Properties prop, InputStream in, boolean xml) throws IOException {
+			try {
+				if (xml)
+					prop.loadFromXML(in);
+				else
+					prop.load(new InputStreamReader(in));
+			} finally {
+				in.close();
+			}
+		}
+
 		private transient volatile Map delegate = this;
 
 		private ENV() {
@@ -383,11 +393,11 @@ public class Objutil implements Replace {
 			return (delegate = this);
 		}
 
-		synchronized void loadMap(Reader rd, Map map) throws IOException {
+		synchronized void loadMap(InputStream in, Map map, boolean xml) throws IOException {
 			Map prev = delegate;
 			delegate = map;
 			try {
-				load(rd);
+				load(this, in, xml);
 			} finally {
 				delegate = prev;
 			}

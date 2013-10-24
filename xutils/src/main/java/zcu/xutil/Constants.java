@@ -7,7 +7,6 @@ public interface Constants {
 	public static final String XUTILS_UNOBFUSCATOR = "xutils.unobfuscator";
 	public static final String XUTILS_MAIN = "xutils.main";
 	public static final String XUTILS_PATH = "xutils.path";
-	public static final String XUTILS_DEBUG = "xutils.debug";
 	public static final String XUTILS_LOGCLASS = "xutils.logclass";
 
 	public static final String XUTILS_CFG_ROOT = "xutils.cfg.root";

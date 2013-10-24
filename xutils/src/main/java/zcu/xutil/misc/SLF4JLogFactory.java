@@ -22,11 +22,12 @@ import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 
 /**
- *
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public final class SLF4JLogFactory implements LogFactory {
 	private final org.slf4j.ILoggerFactory slffactory = org.slf4j.LoggerFactory.getILoggerFactory();
+
 	@Override
 	public Logger getLog(String name) {
 		return new Log(slffactory.getLogger(name));
@@ -68,20 +69,19 @@ public final class SLF4JLogFactory implements LogFactory {
 				else if (level == ERROR)
 					logger.error(message, exception);
 			} else {
-				if (!xdebug) {
-					message = Objutil.format(message, argArray);
-					argArray = null;
-				}
 				if (level == DEBUG)
 					lalog.log(null, FQCN, LocationAwareLogger.DEBUG_INT, message, argArray, exception);
-				else if (level == INFO)
-					lalog.log(null, FQCN, LocationAwareLogger.INFO_INT, message, argArray, exception);
-				else if (level == WARN)
-					lalog.log(null, FQCN, LocationAwareLogger.WARN_INT, message, argArray, exception);
-				else if (level == ERROR)
-					lalog.log(null, FQCN, LocationAwareLogger.ERROR_INT, message, argArray, exception);
+				else {
+					message = Objutil.format(message, argArray);
+					argArray = null;
+					if (level == INFO)
+						lalog.log(null, FQCN, LocationAwareLogger.INFO_INT, message, argArray, exception);
+					else if (level == WARN)
+						lalog.log(null, FQCN, LocationAwareLogger.WARN_INT, message, argArray, exception);
+					else if (level == ERROR)
+						lalog.log(null, FQCN, LocationAwareLogger.ERROR_INT, message, argArray, exception);
+				}
 			}
-
 		}
 	}
 }

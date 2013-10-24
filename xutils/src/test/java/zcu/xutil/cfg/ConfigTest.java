@@ -144,7 +144,6 @@ public class ConfigTest {
 	public void testInterceptor() {
 		System.out.println("-----testInterceptor------");
 		//final SmartDataSource sds =new SmartDataSource(null);
-		int begin=Disp.disposeSize();
 		logger.info("build start !!!");
 		Context ctx=CFG.build(null ,new Config(){
 			public void config(Binder b) throws Exception {
@@ -167,7 +166,6 @@ public class ConfigTest {
 
 		assertEquals("abcdef",ts2.echo("abcdef"));
 		assertEquals("hijklm",ts2.no("hijklm"));
-		System.out.println("weakRef size="+Disp.disposeSize());
 		ctx.destroy();
 	}
 
@@ -192,7 +190,6 @@ public class ConfigTest {
 
 		assertEquals("abcdef",ts2.echo("abcdef"));
 		assertEquals("hijklm",ts2.no("hijklm"));
-		System.out.println("weakRef size="+Disp.disposeSize());
 		thread.exit=true;
 		while(thread.ctx!=null){
 			try {
@@ -202,7 +199,6 @@ public class ConfigTest {
 				e.printStackTrace();
 			}
 		}
-		System.out.println("weakRef size="+Disp.disposeSize());
 	}
 	@Test
 	public void testFactory() {
