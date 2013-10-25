@@ -51,19 +51,20 @@ public final class XMLHandler extends DefaultHandler {
 	}
 
 	Class<?> clsOf(String s) {
-		if (s == null)
+		if (s == null || (s = Objutil.placeholder(s, binder).trim()).isEmpty())
 			return null;
-		Class cls = Convertor.getPrimitive(s = Objutil.placeholder(s, binder).trim());
+		Class cls = Convertor.getPrimitive(s);
 		return cls != null ? cls : Objutil.loadclass(binder.loader(), s);
 	}
 
 	@Override
-	public void startElement(final String uri,final String local,final String qName,final Attributes attrs) throws SAXException {
+	public void startElement(final String uri, final String local, final String qName, final Attributes attrs)
+			throws SAXException {
 		try {
 			if ("import".equals(local))
 				varkey = attrs.getValue("key");
 			else if ("bean".equals(local) || "array".equals(local) || "alias".equals(local))
-				current = new Entry(local, attrs, current);
+				current = new Entry("alias".equals(local), attrs, current);
 			else if (current != null)
 				current.startElement(local, attrs);
 			buffer.setLength(0);
@@ -80,7 +81,7 @@ public final class XMLHandler extends DefaultHandler {
 				String s = getBuffer(false);
 				if (varkey != null)
 					binder.setPlaceholder(varkey, s);
-				else 
+				else
 					binder.batch(s, xmlurl);
 			} else if (current != null && current.endElement(local))
 				current = current.previous;
@@ -131,84 +132,82 @@ public final class XMLHandler extends DefaultHandler {
 
 	@SuppressWarnings("serial")
 	private final class Entry extends ArrayList<Call> {
-		private boolean cache;
-		private boolean eager;
-		private String id, product, destroy, intercepts[];
-		private Class aoptype;
+		private boolean cache, eager, isMap;
+		private String id, destroy, out, intercepts[];
+		private Class type, aoptype;
 		Entry previous;
 
-		Entry(String local, Attributes attrs, Entry prev) {
+		Entry(boolean alias, Attributes attrs, Entry prev) {
 			previous = prev;
 			id = attrs.getValue("id");
 			cache = Boolean.parseBoolean(attrs.getValue("cache"));
-			if ("alias".equals(local))
-				product = attrs.getValue("ref");
+			if (alias)
+				destroy = attrs.getValue("ref");
 			else {
-				product = attrs.getValue("class");
+				type = clsOf(attrs.getValue("class"));
+				isMap = Map.class.isAssignableFrom(type);
 				destroy = attrs.getValue("destroy");
+				out = attrs.getValue("out");
 				eager = Boolean.parseBoolean(attrs.getValue("eager"));
-				add(new Call(attrs.getValue("method"), false));
+				add(new Call(attrs.getValue("from")));
 			}
 		}
 
 		void startElement(String local, Attributes attrs) {
-			boolean set = "set".equals(local) ? add(new Call(attrs.getValue("property"), true)) : false;
-			if (set || "arg".equals(local)) {
-				get(size() - 1).addArg(clsOf(attrs.getValue("class")), attrs.getValue("ref"));
+			if ("set".equals(local) || "arg".equals(local)) {
+				if ("set".equals(local)) {
+					String name = attrs.getValue("name");
+					add(new Call(isMap ? "put" :Util.nameOfSetter(name) ));
+					if(isMap)
+						get(size() - 1).addArg(null).val = name;
+				}
+				get(size() - 1).addArg(clsOf(attrs.getValue("class"))).ref = attrs.getValue("ref");
 			} else if ("call".equals(local)) {
-				add(new Call(attrs.getValue("method"), false));
-			} else if ("out".equals(local)) {
-				add(new Call(attrs.getValue("method"), clsOf(attrs.getValue("class"))));
+				add(new Call(attrs.getValue("name")));
 			} else if ("aop".equals(local)) {
 				aoptype = clsOf(attrs.getValue("class"));
 			}
 		}
 
 		boolean endElement(String local) {
-			boolean alias = false, array = false;
-			if ("set".equals(local) || "arg".equals(local)) {
-				get(size() - 1).tail.val = getBuffer(true);
-			} else if ("aop".equals(local)) {
-				intercepts = Objutil.split(getBuffer(false).trim(), ',').toArray(new String[] {});
-			} else if ("bean".equals(local) || (array = "array".equals(local)) || (alias = "alias".equals(local))) {
-				id = binder.put(cache, id, alias ? binder.ref(product).get() : bind(array), aoptype, intercepts)
-						.die(destroy).eager(eager).name();
+			if ("bean".equals(local) || "array".equals(local) || "alias".equals(local)) {
+				Provider provider = "alias".equals(local) ? binder.ref(destroy).get() : bind("array".equals(local));
+				id = binder.put(cache, id, provider, aoptype, intercepts).die(destroy).eager(eager).name();
 				if (previous != null)
 					previous.get(previous.size() - 1).tail.ref = id;
 				return true;
 			}
+			if ("set".equals(local) || "arg".equals(local))
+				get(size() - 1).tail.val = getBuffer(true);
+			else if ("aop".equals(local))
+				intercepts = Objutil.split(getBuffer(false).trim(), ',').toArray(new String[] {});
 			return false;
 		}
 
 		Provider bind(boolean array) {
-			Class<?> type = clsOf(product);
-			Call c = get(0);
+			Call call = get(0);
 			List<Object> work = new ArrayList<Object>();
-			Object[] params = c.getParamters(binder, work);
+			Object[] params = call.getParamters(binder, work);
 			if (array)
 				return new Xarray(type, params);
 			RefCaller ret;
-			String s = c.method;
-			int i, len = size();
-			if (Objutil.isEmpty(s))
+			int i;
+			if (Objutil.isEmpty(call.method))
 				ret = Prototype.create(type, params);
-			else if ((i = s.lastIndexOf(':')) >= 0)
-				ret = binder.ref(s.substring(0, i)).ext(type, s.substring(i + 1), params);
+			else if ((i = call.method.lastIndexOf(':')) < 0)
+				ret = Prototype.create(type, type, call.method, params);
 			else {
-				i = s.lastIndexOf('.');
-				ret = Prototype.create(type, i > 0 ? clsOf(s.substring(0, i)) : type, s.substring(i + 1), params);
+				String r = call.method.substring(0, i), s = call.method.substring(i + 1);
+				ret = binder.exist(r) ? binder.ref(r).ext(type, s, params) : Prototype.create(type, clsOf(r), s,
+						params);
 			}
-			boolean map = Map.class.isAssignableFrom(ret.getType());
-			for (i = 1; i < len; i++) {
-				params = (c = get(i)).getParamters(binder, work);
-				if (c.output)
-					ret = ret.ext(c.product, c.method, params);
-				else if (!c.setter)
-					ret = ret.call(c.method, params);
-				else if (map)
-					ret = ret.call("put", c.method, params[0]);
-				else
-					ret = ret.call(Util.nameOfSetter(c.method), params);
+			for (i = 1; i < size(); i++) {
+				call = get(i);
+				ret = ret.call(call.method, call.getParamters(binder, work));
+			}
+			if (!Objutil.isEmpty(out)) {
+				Class cls = (i = out.lastIndexOf(':')) > 0 ? clsOf(out.substring(0, i)) : null;
+				ret = ret.ext(cls, out.substring(i + 1), params);
 			}
 			return ret;
 		}
@@ -217,22 +216,13 @@ public final class XMLHandler extends DefaultHandler {
 	private static class Call {
 		final String method;
 		Arg tail;
-		Class product;
-		boolean setter, output;
 
-		Call(String m, boolean set) {
+		Call(String m) {
 			method = m;
-			setter = set;
 		}
-
-		Call(String m, Class c) {
-			method = m;
-			output = true; // product output
-			product = c;
-		}
-
-		void addArg(Class type, String ref) {
-			(tail = new Arg(tail, type)).ref = ref;
+	
+		Arg addArg(Class type) {
+			return (tail = new Arg(tail, type));
 		}
 
 		Object[] getParamters(Binder binder, List<Object> work) {

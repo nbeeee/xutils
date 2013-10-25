@@ -20,12 +20,12 @@
 		<arg>5</arg>
 	</array>
 	<bean class="${map}" id="map" eager="true">
-		<set property="empty"></set>
-		<set property="string">${xutils.home}</set>
-		<set property="int" class="int">124</set>
-		<set property="bytearray" ref="@bytearray2" />
-		<set property="objectlist" class="java.util.List" ref="@number"/>
-		<set property="bytelist" class="java.util.List" ref="@bytearray2"/>
+		<set name="empty"></set>
+		<set name="string">${xutils.home}</set>
+		<set name="int" class="int">124</set>
+		<set name="bytearray" ref="@bytearray2" />
+		<set name="objectlist" class="java.util.List" ref="@number"/>
+		<set name="bytelist" class="java.util.List" ref="@bytearray2"/>
 	</bean>
 	<alias ref="map" id="amap">
 		<aop class="java.util.Map"/>
@@ -38,8 +38,8 @@
 	<bean class="zcu.xutil.cfg.Store" id="mystoreMap">
 			<arg>
 				<bean class="java.util.HashMap">
-					<set property="REFbook" ref="numb"></set>
-					<set property="NEWbook">
+					<set name="REFbook" ref="numb"></set>
+					<set name="NEWbook">
 						<bean class="zcu.xutil.cfg.Book">
 
 								<arg>innnnnrrrrr</arg>
@@ -72,34 +72,33 @@
 
 
 	<bean class="zcu.xutil.FirstBean" id="firstBean">
-		<set property="firstString">${}</set>
-		<call method="setFirstInteger">
+		<set name="firstString">${}</set>
+		<call name="setFirstInteger">
 			<arg>9999</arg>
 		</call>
-		<set property="firstInt" ref="int" />
-		<set property="firstbytes" ref="bytearray" />
+		<set name="firstInt" ref="int" />
+		<set name="firstbytes" ref="bytearray" />
 	</bean>
 	
 
-	<bean id="staticFactory" method="zcu.xutil.Objutil.toURL">
+	<bean id="staticFactory" class="java.net.URL" from="zcu.xutil.Objutil:toURL">
 		<arg class="java.io.File">${xutils.home}</arg>
 	</bean>
-	<bean class="zcu.xutil.FirstBean" id="output">
-		<set property="firstString">oooooooooo</set>
-		<call method="setFirstInteger">
+	<bean class="zcu.xutil.FirstBean" id="output" out="getFirstString">
+		<set name="firstString">oooooooooo</set>
+		<call name="setFirstInteger">
 			<arg>9999</arg>
 		</call>
-		<set property="firstInt" ref="int" />
-		<set property="firstbytes" ref="bytearray" />
-		<out method="getFirstString" />
+		<set name="firstInt" ref="int" />
+		<set name="firstbytes" ref="bytearray" />
 	</bean>
 	<bean class="zcu.xutil.FirstBean" id="bean2">
-		<set property="firstString">oooooooooo</set>
-		<call method="setFirstInteger">
+		<set name="firstString">oooooooooo</set>
+		<call name="setFirstInteger">
 			<arg>9999</arg>
 		</call>
-		<set property="firstInt" ref="int" />
-		<set property="firstbytes">
+		<set name="firstInt" ref="int" />
+		<set name="firstbytes">
 			<array class="byte">
 				<arg>1</arg>
 				<arg>3</arg>
@@ -107,5 +106,5 @@
 			</array>
 		</set>
 	</bean>
-	<bean class="java.lang.String" id="factory" method="bean2:getFirstString"/>
+	<bean class="java.lang.String" id="factory" from="bean2:getFirstString"/>
 </beans>

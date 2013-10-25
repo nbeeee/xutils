@@ -78,7 +78,7 @@ public abstract class BeanReference {
 	public final Object cast(Class toType) {
 		Provider p = matches(toType, State.dummy);
 		if (p != null)
-			return new Cast(p, toType);
+			return	p instanceof BeanReference && p.getType()==toType ? p : new Cast(p, toType);
 		if (allowForceCast())
 			return new Cast(get(), toType);
 		throw new ClassCastException(toString() + " can't cast to: " + toType.getName());

@@ -8,8 +8,8 @@
 			<bean class="zcu.xutil.sql.MiniDataSource" destroy="destroy">
 				<arg>
 					<bean class="org.h2.jdbcx.JdbcDataSource">
-						<set property="URL">jdbc:h2:~/h2db/test;DB_CLOSE_DELAY=-1</set>
-						<set property="user">sa</set>
+						<set name="URL">jdbc:h2:~/h2db/test;DB_CLOSE_DELAY=-1</set>
+						<set name="user">sa</set>
 					</bean>
 				</arg>
 				<arg>4</arg>
