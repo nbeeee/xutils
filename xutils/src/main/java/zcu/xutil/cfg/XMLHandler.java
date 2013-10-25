@@ -31,6 +31,7 @@ import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.utils.Convertor;
 import zcu.xutil.utils.Util;
+import static zcu.xutil.cfg.Prototype.create;
 
 public final class XMLHandler extends DefaultHandler {
 	final DefaultBinder binder;
@@ -64,7 +65,7 @@ public final class XMLHandler extends DefaultHandler {
 			if ("import".equals(local))
 				varkey = attrs.getValue("key");
 			else if ("bean".equals(local) || "array".equals(local) || "alias".equals(local))
-				current = new Entry("alias".equals(local), attrs, current);
+				current = new Entry(local, attrs, current);
 			else if (current != null)
 				current.startElement(local, attrs);
 			buffer.setLength(0);
@@ -132,35 +133,32 @@ public final class XMLHandler extends DefaultHandler {
 
 	@SuppressWarnings("serial")
 	private final class Entry extends ArrayList<Call> {
-		private boolean cache, eager, isMap;
-		private String id, destroy, out, intercepts[];
+		private boolean cache, eager, alias, array;
+		private String id, destroy, output, intercepts[];
 		private Class type, aoptype;
 		Entry previous;
 
-		Entry(boolean alias, Attributes attrs, Entry prev) {
+		Entry(String local, Attributes attrs, Entry prev) {
 			previous = prev;
 			id = attrs.getValue("id");
 			cache = Boolean.parseBoolean(attrs.getValue("cache"));
-			if (alias)
+			if (alias = "alias".equals(local))
 				destroy = attrs.getValue("ref");
 			else {
+				array = "array".equals(local);
 				type = clsOf(attrs.getValue("class"));
-				isMap = Map.class.isAssignableFrom(type);
 				destroy = attrs.getValue("destroy");
-				out = attrs.getValue("out");
+				output = attrs.getValue("output");
 				eager = Boolean.parseBoolean(attrs.getValue("eager"));
 				add(new Call(attrs.getValue("from")));
 			}
 		}
 
 		void startElement(String local, Attributes attrs) {
-			if ("set".equals(local) || "arg".equals(local)) {
-				if ("set".equals(local)) {
-					String name = attrs.getValue("name");
-					add(new Call(isMap ? "put" :Util.nameOfSetter(name) ));
-					if(isMap)
-						get(size() - 1).addArg(null).val = name;
-				}
+			boolean set = "set".equals(local);
+			if (set || "arg".equals(local)) {
+				if (set)
+					add(new Setter(attrs.getValue("name")));
 				get(size() - 1).addArg(clsOf(attrs.getValue("class"))).ref = attrs.getValue("ref");
 			} else if ("call".equals(local)) {
 				add(new Call(attrs.getValue("name")));
@@ -171,8 +169,7 @@ public final class XMLHandler extends DefaultHandler {
 
 		boolean endElement(String local) {
 			if ("bean".equals(local) || "array".equals(local) || "alias".equals(local)) {
-				Provider provider = "alias".equals(local) ? binder.ref(destroy).get() : bind("array".equals(local));
-				id = binder.put(cache, id, provider, aoptype, intercepts).die(destroy).eager(eager).name();
+				id = binder.put(cache, id, bind(), aoptype, intercepts).die(destroy).eager(eager).name();
 				if (previous != null)
 					previous.get(previous.size() - 1).tail.ref = id;
 				return true;
@@ -184,32 +181,48 @@ public final class XMLHandler extends DefaultHandler {
 			return false;
 		}
 
-		Provider bind(boolean array) {
+		Provider bind() {
+			if (alias)
+				return binder.ref(destroy).get();
 			Call call = get(0);
 			List<Object> work = new ArrayList<Object>();
 			Object[] params = call.getParamters(binder, work);
 			if (array)
 				return new Xarray(type, params);
-			RefCaller ret;
 			int i;
-			if (Objutil.isEmpty(call.method))
-				ret = Prototype.create(type, params);
-			else if ((i = call.method.lastIndexOf(':')) < 0)
-				ret = Prototype.create(type, type, call.method, params);
+			RefCaller ret;
+			String s = call.method;
+			if (Objutil.isEmpty(s))
+				ret = create(type, params);
+			else if ((i = s.lastIndexOf(':')) < 0)
+				ret = create(type, type, s, params);
 			else {
-				String r = call.method.substring(0, i), s = call.method.substring(i + 1);
-				ret = binder.exist(r) ? binder.ref(r).ext(type, s, params) : Prototype.create(type, clsOf(r), s,
-						params);
+				String r = s.substring(0, i);
+				s = s.substring(i + 1);
+				ret = binder.exist(r) ? binder.ref(r).ext(type, s, params) : create(type, clsOf(r), s, params);
 			}
-			for (i = 1; i < size(); i++) {
-				call = get(i);
-				ret = ret.call(call.method, call.getParamters(binder, work));
+			final int len = size();
+			final boolean map = Map.class.isAssignableFrom(ret.getType());
+			for (i = 1; i < len; i++) {
+				params = (call = get(i)).getParamters(binder, work);
+				if (!(call instanceof Setter))
+					ret = ret.call(call.method, params);
+				else if (map)
+					ret = ret.call("put", new Object[] { call.method, params[0] });
+				else
+					ret = ret.call(Util.nameOfSetter(call.method), params);
 			}
-			if (!Objutil.isEmpty(out)) {
-				Class cls = (i = out.lastIndexOf(':')) > 0 ? clsOf(out.substring(0, i)) : null;
-				ret = ret.ext(cls, out.substring(i + 1), params);
+			if (!Objutil.isEmpty(s = output)) {
+				Class cls = (i = s.lastIndexOf(':')) > 0 ? clsOf(s.substring(0, i)) : null;
+				ret = ret.ext(cls, s.substring(i + 1), (Object[]) null);
 			}
 			return ret;
+		}
+	}
+
+	private static class Setter extends Call {
+		Setter(String m) {
+			super(m);
 		}
 	}
 
@@ -220,7 +233,7 @@ public final class XMLHandler extends DefaultHandler {
 		Call(String m) {
 			method = m;
 		}
-	
+
 		Arg addArg(Class type) {
 			return (tail = new Arg(tail, type));
 		}

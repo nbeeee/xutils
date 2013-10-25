@@ -4,11 +4,11 @@
 <!ATTLIST import key CDATA #IMPLIED>
 <!ELEMENT bean (arg*,(set|call)*,aop?)>
 <!ATTLIST bean id CDATA #IMPLIED>
-<!ATTLIST bean class CDATA #REQUIRED>
+<!ATTLIST bean class CDATA #IMPLIED>
 <!ATTLIST bean cache (true|false) "true">
 <!ATTLIST bean eager (true|false) "false">
 <!ATTLIST bean from CDATA #IMPLIED>
-<!ATTLIST bean out CDATA #IMPLIED>
+<!ATTLIST bean output CDATA #IMPLIED>
 <!ATTLIST bean destroy CDATA #IMPLIED>
 <!ELEMENT array (arg*)>
 <!ATTLIST array id CDATA #IMPLIED>

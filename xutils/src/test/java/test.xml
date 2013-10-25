@@ -81,10 +81,10 @@
 	</bean>
 	
 
-	<bean id="staticFactory" class="java.net.URL" from="zcu.xutil.Objutil:toURL">
+	<bean id="staticFactory" from="zcu.xutil.Objutil:toURL">
 		<arg class="java.io.File">${xutils.home}</arg>
 	</bean>
-	<bean class="zcu.xutil.FirstBean" id="output" out="getFirstString">
+	<bean class="zcu.xutil.FirstBean" id="output" output="getFirstString">
 		<set name="firstString">oooooooooo</set>
 		<call name="setFirstInteger">
 			<arg>9999</arg>
