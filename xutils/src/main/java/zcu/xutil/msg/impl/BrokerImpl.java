@@ -38,6 +38,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.jgroups.Address;
 import org.jgroups.Channel;
@@ -71,7 +72,7 @@ import zcu.xutil.utils.ProxyHandler;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, MessageListener, Disposable {
-	static volatile long lastUsed;
+	static final AtomicLong lastUsed = new AtomicLong();
 	static final RequestOptions defalutOptions= new RequestOptions(ResponseMode.GET_ALL,30000);
 	static final Logger logger = Logger.getLogger(BrokerImpl.class);
 
@@ -514,7 +515,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		}
 
 		byte[] dispatch(Message msg, int timeout) {
-			used = lastUsed++;
+			used = lastUsed.getAndIncrement();
 			msg.setDest(addr);
 			Object o;
 			try {

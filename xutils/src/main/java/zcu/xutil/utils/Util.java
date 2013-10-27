@@ -38,15 +38,17 @@ import zcu.xutil.XutilRuntimeException;
 
 public final class Util implements Iterator {
 	public static final String filencode = Objutil.systring("file.encoding", "GBK");
-	private static final Map<String, Format> formatCache = lruMap(11, null);
 	private static final TGP xutilsGroup = new TGP();
+	private static Map<String, Format> formatCache;
 
 	public static String format(String pattern, Object dateOrNumber) {
 		boolean date = dateOrNumber instanceof Date;
 		if (!date && !(dateOrNumber instanceof Number))
 			throw new UnsupportedOperationException("neither Date nor Number.");
 		Format format;
-		synchronized (formatCache) {
+		synchronized (Util.class) {
+			if(formatCache == null)
+				formatCache = lruMap(11, null);
 			if ((format = formatCache.get(pattern)) == null)
 				formatCache.put(pattern, format = date ? new SimpleDateFormat(pattern) : new DecimalFormat(pattern));
 		}
