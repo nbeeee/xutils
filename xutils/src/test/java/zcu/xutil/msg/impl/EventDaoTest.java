@@ -44,9 +44,9 @@ public class EventDaoTest {
 
 		try {
 			Event entity = new Event("eventName", "eventValue", 3.14, new Date());
-			eventDao.store(entity,false);
-			EventDao.Service service = eventDao.getService("eventName");
-			Event event, queue =event= service.loadOrGet();
+			eventDao.store(entity);
+			EventDao.Service service = eventDao.new Service("eventName");
+			Event event, queue =event= service.loadIfNecessary();
 			int count =0;
 			while(queue!=null){
 				if (queue.getId().equals(entity.getId())) {
@@ -63,9 +63,9 @@ public class EventDaoTest {
 			logger.info("delete stale event {}",eventDao.query.update(EventDao.delete));
 			entity = new Event("eventName", "value", 666, new Date());
 
-			eventDao.store(entity,false);
+			eventDao.store(entity);
 			entity.setExpire(new Date());
-			eventDao.store(entity,false);
+			eventDao.store(entity);
 			logger.info("insert last: {},{}", entity.getId(), entity);
 		} catch (SQLException e) {
 

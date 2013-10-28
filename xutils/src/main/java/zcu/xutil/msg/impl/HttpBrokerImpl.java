@@ -170,7 +170,7 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 					} catch (Throwable e) {
 						// ignore
 					}
-				eventDao.store(event, false);
+				eventDao.store(event);
 			}
 		};
 	}

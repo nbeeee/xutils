@@ -16,8 +16,10 @@
 package zcu.xutil.msg.impl;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,17 +48,6 @@ import zcu.xutil.utils.Util;
 public final class EventDao implements Runnable {
 	static final Handler<List<Event>> listHandle = new BeanRow<Event>(Event.class).list(25, 50);
 	static final Logger logger = Logger.getLogger(EventDao.class);
-	/*
-	 * for derby
-	 * 
-	 * static final String create =
-	 * "CREATE TABLE msg_event (id int generated always as identity,"+
-	 * "eventname VARCHAR(100),eventvalue VARCHAR(100),eventdata VARCHAR(2000) FOR BIT DATA,"
-	 * + "repeat INTEGER,status SMALLINT,createTime TIMESTAMP,PRIMARY KEY(id))";
-	 */
-	/*
-	 * for H2
-	 */
 	static final String create = "CREATE TABLE EVENT (ID IDENTITY,NAME VARCHAR(100),VALUE VARCHAR(100),"
 			+ "DATAS VARBINARY(8190),EXPIRE TIMESTAMP,PRIMARY KEY(ID))";
 	static final String retrieve = "SELECT ID,VALUE,DATAS,EXPIRE FROM EVENT WHERE EXPIRE IS NOT NULL AND NAME=? ORDER BY ID";
@@ -106,23 +97,6 @@ public final class EventDao implements Runnable {
 		worker = Util.newThread(this, "MsgSender", false);
 	}
 
-	Service getService(String name) {
-		Service[] array = allService.get();
-		int len = array.length;
-		for (int i = 0; i < len; i++) {
-			if (array[i].canonicalName.equals(name))
-				return array[i];
-		}
-		Service[] news = new Service[len + 1];
-		news[len] = new Service(name);
-		while (--len >= 0) {
-			news[len] = array[len];
-		}
-		if (allService.compareAndSet(array, news))
-			return news[len];
-		return getService(name);
-	}
-
 	public boolean dropTable() throws SQLException {
 		if (!query.tableExist("EVENT"))
 			return false;
@@ -149,23 +123,24 @@ public final class EventDao implements Runnable {
 		}
 	}
 
-	void store(Event event, boolean rescue) {
-		long current = Util.now();
+	void store(Event event) {
+		if (event.getExpire() == null) // default expire 2 hours
+			event.setExpire(new Date(Util.now() + 7200 * 1000));
 		try {
-			Date date = event.getExpire();
-			if (date == null)
-				event.setExpire(new Date(current + 7200 * 1000)); //default expire 2 hours
-			else if (date.getTime() < current) {
-				event.discardLogger("expire");
-				return;
-			}
 			query.entityUpdate(insert, event);
 		} catch (SQLException e) {
 			throw new XutilRuntimeException(e);
 		}
-		Service s = getService(event.getName());
-		if (rescue)
-			s.untilMillis = current + 4000;
+		final String name = event.getName();
+		Service[] array, news;
+		do {
+			int len = (array = allService.get()).length;
+			while (--len >= 0) {
+				if (array[len].canonicalName.equals(name))
+					return;
+			}
+			(news = Arrays.copyOf(array, array.length + 1))[array.length] = new Service(name);
+		} while (allService.compareAndSet(array, news));
 	}
 
 	@Override
@@ -230,61 +205,52 @@ public final class EventDao implements Runnable {
 		}
 
 		void sentEvents(long current) throws Throwable {
-			Event event = loadOrGet();
-			if (event == null) {
+			if (loadIfNecessary() == null) {
 				untilMillis = current + 4000;
 				return;
 			}
 			if (sobj != null || (sobj = broker.getSOBJ(canonicalName)) != null) {
 				try {
 					sobj.handler.executor.execute(this);
-				} catch (Throwable e) {
+				} catch (RejectedExecutionException e) {
 					untilMillis = current + 4000;
 					logger.info("TOO MANY TASK. ", e);
 				}
 				return;
 			}
-			do {
-				if (event.getExpire().getTime() < current)
-					event.discardLogger("expire");
-				else
-					try {
-						broker.sendToRemote(event, 0);
-					} catch (IllegalMsgException e) {
-						event.discardLogger(e.toString());
-					} catch (UnavailableException e) {
-						untilMillis = current + 4000;
-						logger.warn("{} unavailable. recall latter", e, event.getName());
-						break;
-					} catch (Throwable e) {
-						throw e;
-					}
-			} while ((event = okAndNext(event)) != null);
+			for (Event event = head; event != null; event = okAndNext(event)) {
+				try {
+					broker.sendToRemote(event, 0);
+				} catch (IllegalMsgException e) {
+					event.discardLogger(e.toString());
+				} catch (UnavailableException e) {
+					untilMillis = current + 4000;
+					logger.warn("{} unavailable. recall latter", e, event.getName());
+					break;
+				} catch (Throwable e) {
+					throw e;
+				}
+			}
 		}
 
 		@Override
 		public void run() {
-			if (!running.compareAndSet(false, true))
-				return;
-			try {
-				long current = Util.now();
-				for (Event event = head; event != null; event = okAndNext(event)) {
-					if (event.getExpire().getTime() < current)
-						event.discardLogger("expire");
-					else
+			if (running.compareAndSet(false, true))
+				try {
+					for (Event event = head; event != null; event = okAndNext(event)) {
 						try {
 							sobj.invoke(event);
 						} catch (UnavailableException e) {
-							untilMillis = current + 8000;
+							untilMillis = Util.now() + 8000;
 							logger.warn("{} unavailable. recall latter", e, event.getName());
 							break;
 						} catch (Throwable e) {
 							event.discardLogger(e.toString());
 						}
+					}
+				} finally {
+					running.set(false);
 				}
-			} finally {
-				running.set(false);
-			}
 		}
 
 		Event okAndNext(Event event) {
@@ -296,17 +262,25 @@ public final class EventDao implements Runnable {
 			} catch (SQLException e) {
 				throw new XutilRuntimeException(e);
 			}
-
 		}
 
-		Event loadOrGet() throws SQLException {
-			if (head == null) {
+		Event loadIfNecessary() throws SQLException {
+			while (head == null) {
 				List<Event> ret = query.query(retrieve, listHandle, canonicalName);
 				int size = ret.size();
+				if(size ==0)
+					return null;
 				Event tmp, next = null;
+				long current = Util.now();
 				while (--size >= 0) {
-					(tmp = ret.get(size)).next = next;
-					(next = tmp).setName(canonicalName);
+					tmp = ret.get(size);
+					if (tmp.getExpire().getTime() < current) {
+						query.update(updateToSent, tmp.getId());
+						tmp.discardLogger("expire");
+					} else {
+						tmp.next = next;
+						(next = tmp).setName(canonicalName);
+					}
 				}
 				head = next;
 			}

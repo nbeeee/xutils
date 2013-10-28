@@ -384,7 +384,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 					} catch (Throwable e) {
 						logger.debug("prefer send fail. store event: {}", e, event);
 					}
-				eventDao.store(event, false);
+				eventDao.store(event);
 			}
 		};
 	}

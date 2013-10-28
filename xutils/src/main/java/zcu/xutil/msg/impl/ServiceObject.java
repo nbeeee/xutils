@@ -39,7 +39,7 @@ public abstract class ServiceObject {
 					try {
 						invoke(event);
 					} catch (UnavailableException e) {
-						handler.eventDao.store(event, true);
+						handler.eventDao.store(event);
 						logger.warn("{} unavailable. recall latter", e, event.getName());
 					} catch (Throwable e) {
 						event.discardLogger(e.toString());

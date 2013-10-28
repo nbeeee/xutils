@@ -69,18 +69,19 @@ public final class SLF4JLogFactory implements LogFactory {
 				else if (level == ERROR)
 					logger.error(message, exception);
 			} else {
-				if (level == DEBUG)
-					lalog.log(null, FQCN, LocationAwareLogger.DEBUG_INT, message, argArray, exception);
-				else {
+				if (!lalog.isTraceEnabled()) {
 					message = Objutil.format(message, argArray);
 					argArray = null;
-					if (level == INFO)
-						lalog.log(null, FQCN, LocationAwareLogger.INFO_INT, message, argArray, exception);
-					else if (level == WARN)
-						lalog.log(null, FQCN, LocationAwareLogger.WARN_INT, message, argArray, exception);
-					else if (level == ERROR)
-						lalog.log(null, FQCN, LocationAwareLogger.ERROR_INT, message, argArray, exception);
 				}
+				if (level == DEBUG)
+					lalog.log(null, FQCN, LocationAwareLogger.DEBUG_INT, message, argArray, exception);
+				else if (level == INFO)
+					lalog.log(null, FQCN, LocationAwareLogger.INFO_INT, message, argArray, exception);
+				else if (level == WARN)
+					lalog.log(null, FQCN, LocationAwareLogger.WARN_INT, message, argArray, exception);
+				else if (level == ERROR)
+					lalog.log(null, FQCN, LocationAwareLogger.ERROR_INT, message, argArray, exception);
+
 			}
 		}
 	}
