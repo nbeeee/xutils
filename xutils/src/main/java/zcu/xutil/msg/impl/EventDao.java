@@ -18,7 +18,9 @@ package zcu.xutil.msg.impl;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.sql.DataSource;
 
@@ -38,16 +40,15 @@ import zcu.xutil.sql.handl.FirstField;
 import zcu.xutil.utils.Util;
 
 /**
- *
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public final class EventDao implements Runnable {
-	static final int maxRows = 50;
-	static final Handler<List<Event>> listHandle = new BeanRow<Event>(Event.class).list(25, maxRows);
+	static final Handler<List<Event>> listHandle = new BeanRow<Event>(Event.class).list(25, 50);
 	static final Logger logger = Logger.getLogger(EventDao.class);
 	/*
 	 * for derby
-	 *
+	 * 
 	 * static final String create =
 	 * "CREATE TABLE msg_event (id int generated always as identity,"+
 	 * "eventname VARCHAR(100),eventvalue VARCHAR(100),eventdata VARCHAR(2000) FOR BIT DATA,"
@@ -67,15 +68,16 @@ public final class EventDao implements Runnable {
 
 	final Query query;
 	final BrokerAgent broker;
-	private final NpSQL insert;
-	private volatile Service[] allService;
-	private volatile Thread worker; // blinker moribund
 	final AtomicInteger total = new AtomicInteger();
+	private final NpSQL insert;
+	private final AtomicReference<Service[]> allService;
+	private volatile Thread worker; // blinker moribund
 
 	public EventDao(final String name, DataSource ds, final BrokerAgent agent) {
 		if (ds == null) {
 			JdbcDataSource h2ds = new JdbcDataSource();
-			h2ds.setURL("jdbc:h2:" + Objutil.systring(Constants.XUTILS_HOME) + "/xmessage/" + name + ";DB_CLOSE_ON_EXIT=FALSE");
+			h2ds.setURL("jdbc:h2:" + Objutil.systring(Constants.XUTILS_HOME) + "/xmessage/" + name
+					+ ";DB_CLOSE_ON_EXIT=FALSE");
 			logger.info("dburl={}", h2ds.getURL());
 			h2ds.setUser("sa");
 			ds = new MiniDataSource(h2ds, 4, 8);
@@ -84,37 +86,41 @@ public final class EventDao implements Runnable {
 		this.insert = new NpSQL(new ID("id"), insertSql);
 		this.broker = agent;
 		try {
+			Service[] services;
 			if (query.tableExist("EVENT")) {
 				logger.info("delete stale event {}", query.update(delete));
 				List<String> list = query.query(eventNames, FirstField.get(String.class).list(50, -1));
 				int len = list.size();
-				allService = new Service[len];
+				services = new Service[len];
 				while (--len >= 0)
-					(allService[len] = new Service(list.get(len))).hasStoredEvent = true;
+					services[len] = new Service(list.get(len));
 			} else {
 				query.update(create);
 				query.update("SET DEFAULT_LOCK_TIMEOUT 5000"); // h2 table lock
-				allService = new Service[0];
+				services = new Service[0];
 			}
+			allService = new AtomicReference<Service[]>(services);
 		} catch (SQLException e) {
 			throw new XutilRuntimeException(e);
 		}
 		worker = Util.newThread(this, "MsgSender", false);
 	}
 
-	synchronized Service getService(String name) {
-		Service[] array = allService;
+	Service getService(String name) {
+		Service[] array = allService.get();
 		int len = array.length;
 		for (int i = 0; i < len; i++) {
 			if (array[i].canonicalName.equals(name))
 				return array[i];
 		}
-		Service ret, news[] = new Service[len + 1];
-		ret = news[len] = new Service(name);
-		while (--len >= 0)
+		Service[] news = new Service[len + 1];
+		news[len] = new Service(name);
+		while (--len >= 0) {
 			news[len] = array[len];
-		allService = news;
-		return ret;
+		}
+		if (allService.compareAndSet(array, news))
+			return news[len];
+		return getService(name);
 	}
 
 	public boolean dropTable() throws SQLException {
@@ -129,14 +135,14 @@ public final class EventDao implements Runnable {
 	}
 
 	void destroy() {
-		Thread moribund = worker;
-		if (moribund == null)
-			return;
-		synchronized (insert) {
-			worker = null;
-			insert.notify();
-		}
 		try {
+			Thread moribund = worker;
+			if (moribund == null)
+				return;
+			synchronized (this) {
+				worker = null;
+				notify();
+			}
 			moribund.join(2000);
 		} catch (Throwable e) {
 			// ignore
@@ -148,9 +154,9 @@ public final class EventDao implements Runnable {
 		try {
 			Date date = event.getExpire();
 			if (date == null)
-				event.setExpire(new Date(current + 3600 * 1000));
+				event.setExpire(new Date(current + 7200 * 1000)); //default expire 2 hours
 			else if (date.getTime() < current) {
-				event.discardLogger(null);
+				event.discardLogger("expire");
 				return;
 			}
 			query.entityUpdate(insert, event);
@@ -160,8 +166,8 @@ public final class EventDao implements Runnable {
 		Service s = getService(event.getName());
 		if (rescue)
 			s.untilMillis = current + 4000;
-		s.hasStoredEvent = true;
 	}
+
 	@Override
 	public void run() {
 		long current, lastClearMillis = current = Util.now();
@@ -174,12 +180,12 @@ public final class EventDao implements Runnable {
 						lastClearMillis = current;
 						logger.info("delete stale event: {}", query.update(delete));
 					}
-					synchronized (insert) {
+					synchronized (this) {
 						if (worker != null)
-							insert.wait(sleepMillis);
+							wait(sleepMillis);
 					}
 				}
-				Service[] array = allService;
+				Service[] array = allService.get();
 				current = Util.now();
 				for (int tail, i = tail = array.length - 1; i >= 0; i--) {
 					Service s = array[index = index < tail ? index + 1 : 0];
@@ -195,7 +201,7 @@ public final class EventDao implements Runnable {
 				logger.warn("!!!!!!!!! exception !!!!!!!!!", e);
 			}
 		}
-		for (Service s : allService) {
+		for (Service s : allService.get()) {
 			try {
 				s.sentEvents(current);
 			} catch (SQLException e) {
@@ -208,11 +214,10 @@ public final class EventDao implements Runnable {
 	}
 
 	final class Service implements Runnable {
+		private final AtomicBoolean running = new AtomicBoolean();
 		final String canonicalName;
 		private Event head;
 		private ServiceObject sobj;
-		private volatile boolean running;
-		volatile boolean hasStoredEvent;
 		volatile long untilMillis;
 
 		Service(String name) {
@@ -221,55 +226,51 @@ public final class EventDao implements Runnable {
 
 		@Override
 		public String toString() {
-			return (head != null || hasStoredEvent) ? canonicalName.concat("#####") : canonicalName;
+			return head != null ? canonicalName.concat("#####") : canonicalName;
 		}
 
 		void sentEvents(long current) throws Throwable {
+			Event event = loadOrGet();
+			if (event == null) {
+				untilMillis = current + 4000;
+				return;
+			}
 			if (sobj != null || (sobj = broker.getSOBJ(canonicalName)) != null) {
-				if (running)
-					return;
-				if (loadOrGet() == null)
+				try {
+					sobj.handler.executor.execute(this);
+				} catch (Throwable e) {
 					untilMillis = current + 4000;
-				else {
-					running = true;
-					try {
-						sobj.handler.executor.execute(this);
-					} catch (Throwable e) {
-						running = false;
-						untilMillis = current + 4000;
-						logger.info("TOO MANY TASK. ", e);
-					}
+					logger.info("TOO MANY TASK. ", e);
 				}
 				return;
 			}
-			Event event = loadOrGet();
-			if (event == null)
-				untilMillis = current + 4000;
-			else
-				do {
-					if (event.getExpire().getTime() < current)
-						event.discardLogger(null);
-					else
-						try {
-							broker.sendToRemote(event, 0);
-						} catch (IllegalMsgException e) {
-							event.discardLogger(e);
-						} catch (UnavailableException e) {
-							untilMillis = current + 4000;
-							logger.warn("{} unavailable. recall latter", e, event.getName());
-							break;
-						} catch (Throwable e) {
-							throw e;
-						}
-				} while ((event = okAndNext(event)) != null);
+			do {
+				if (event.getExpire().getTime() < current)
+					event.discardLogger("expire");
+				else
+					try {
+						broker.sendToRemote(event, 0);
+					} catch (IllegalMsgException e) {
+						event.discardLogger(e.toString());
+					} catch (UnavailableException e) {
+						untilMillis = current + 4000;
+						logger.warn("{} unavailable. recall latter", e, event.getName());
+						break;
+					} catch (Throwable e) {
+						throw e;
+					}
+			} while ((event = okAndNext(event)) != null);
 		}
+
 		@Override
 		public void run() {
+			if (!running.compareAndSet(false, true))
+				return;
 			try {
 				long current = Util.now();
 				for (Event event = head; event != null; event = okAndNext(event)) {
 					if (event.getExpire().getTime() < current)
-						event.discardLogger(null);
+						event.discardLogger("expire");
 					else
 						try {
 							sobj.invoke(event);
@@ -278,11 +279,11 @@ public final class EventDao implements Runnable {
 							logger.warn("{} unavailable. recall latter", e, event.getName());
 							break;
 						} catch (Throwable e) {
-							event.discardLogger(e);
+							event.discardLogger(e.toString());
 						}
 				}
 			} finally {
-				running = false;
+				running.set(false);
 			}
 		}
 
@@ -298,24 +299,16 @@ public final class EventDao implements Runnable {
 
 		}
 
-		Event loadOrGet() {
-			if (head == null && hasStoredEvent) {
-				hasStoredEvent = false;
-				try {
-					List<Event> ret = query.query(retrieve, listHandle, canonicalName);
-					int size = ret.size();
-					if (size >= EventDao.maxRows)
-						hasStoredEvent = true;
-					Event tmp, next = null;
-					while (--size >= 0) {
-						(tmp = ret.get(size)).next = next;
-						(next = tmp).setName(canonicalName);
-					}
-					head = next;
-				} catch (Throwable e) {
-					hasStoredEvent = true;
-					throw Objutil.rethrow(e);
+		Event loadOrGet() throws SQLException {
+			if (head == null) {
+				List<Event> ret = query.query(retrieve, listHandle, canonicalName);
+				int size = ret.size();
+				Event tmp, next = null;
+				while (--size >= 0) {
+					(tmp = ret.get(size)).next = next;
+					(next = tmp).setName(canonicalName);
 				}
+				head = next;
 			}
 			return head;
 		}

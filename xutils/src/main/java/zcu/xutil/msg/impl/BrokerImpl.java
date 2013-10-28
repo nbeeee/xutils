@@ -72,6 +72,7 @@ import zcu.xutil.utils.ProxyHandler;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, MessageListener, Disposable {
+	private static final StackTraceElement[] EMPTY_STACKS = {};
 	static final AtomicLong lastUsed = new AtomicLong();
 	static final RequestOptions defalutOptions= new RequestOptions(ResponseMode.GET_ALL,30000);
 	static final Logger logger = Logger.getLogger(BrokerImpl.class);
@@ -265,7 +266,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			Message msg = toMessage(event);
 			return select(name).dispatch(msg, 0);
 		} catch (Throwable e) {
-			Event.clearStack(e);
+			clearStack(e);
 			return Event.marshall(e);
 		}
 	}
@@ -285,7 +286,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		} catch (MSGException e) {
 			throw e;
 		} catch (Throwable e) {
-			Event.clearStack(e);
+			clearStack(e);
 			return Event.marshall(e);
 		}
 	}
@@ -571,6 +572,11 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 				}
 			}
 		}
+	}
+	private static void clearStack(Throwable t) {
+		do
+			t.setStackTrace(EMPTY_STACKS);
+		while ((t = t.getCause()) != null);
 	}
 
 	static Event toEvent(Message msg) {

@@ -42,7 +42,7 @@ public abstract class ServiceObject {
 						handler.eventDao.store(event, true);
 						logger.warn("{} unavailable. recall latter", e, event.getName());
 					} catch (Throwable e) {
-						event.discardLogger(e);
+						event.discardLogger(e.toString());
 					}
 				}
 			});

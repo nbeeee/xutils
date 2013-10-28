@@ -42,7 +42,7 @@ import zcu.xutil.utils.ByteArray;
  */
 public final class Event implements Externalizable {
 	private static final Logger discardLogger = Logger.getLogger(Event.class);
-	private static final StackTraceElement[] EMPTY_STACKS = {};
+	private static final Object[] EMPTY_PARAMETERS={};
 	private static final byte[] EMPTY_BYTES = {};
 
 	private static final byte TYPE_NULL = 0;
@@ -57,12 +57,6 @@ public final class Event implements Externalizable {
 	private static final byte TYPE_SHORT = 17;
 	private static final byte TYPE_STRING = 18;
 	private static final byte TYPE_BYTEARRAY = 19;
-
-	public static void clearStack(Throwable t) {
-		do
-			t.setStackTrace(EMPTY_STACKS);
-		while ((t = t.getCause()) != null);
-	}
 
 	public static byte[] marshall(Object rsp) {
 		if (rsp == null)
@@ -216,7 +210,7 @@ public final class Event implements Externalizable {
 	public Event(String eventName, String eventValue, Object... parameters) {
 		this.name = eventName;
 		this.value = eventValue;
-		this.objects = parameters == null ? EMPTY_STACKS : parameters;
+		this.objects = parameters == null ? EMPTY_PARAMETERS : parameters;
 	}
 
 	public Long getId() {
@@ -325,7 +319,7 @@ public final class Event implements Externalizable {
 	Object[] parameters() {
 		if (objects == null) {
 			if (datas == null || datas.length == 0)
-				objects = EMPTY_STACKS;
+				objects = EMPTY_PARAMETERS;
 			else {
 				List<Object> list = new ArrayList<Object>();
 				deserial(datas, list);
@@ -385,7 +379,7 @@ public final class Event implements Externalizable {
 		return name + " ,value=" + value;
 	}
 
-	void discardLogger(Throwable e) {
+	void discardLogger(String cause) {
 		List<Object> list;
 		if (objects != null)
 			list = Arrays.asList(objects);
@@ -399,6 +393,6 @@ public final class Event implements Externalizable {
 				// ignore
 			}
 		}
-		discardLogger.info("name={} ,value={} ,params={}", e, name, value, list);
+		discardLogger.info("{}: name={} ,value={} ,params={}", name, value, list);
 	}
 }
