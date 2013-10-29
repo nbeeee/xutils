@@ -15,43 +15,6 @@
  */
 package zcu.xutil.msg.impl;
 
-import java.util.concurrent.RejectedExecutionException;
-
-import zcu.xutil.Constants;
-import zcu.xutil.Logger;
-import zcu.xutil.Objutil;
-
-public abstract class ServiceObject {
-	static final Logger logger = Logger.getLogger(ServiceObject.class);
-	final Handler handler;
-
-	protected ServiceObject(Handler h) {
-		handler = h;
-	}
-
-	public final Object handle(final Event event) throws Throwable {
-		if (event.syncall)
-			return invoke(event);
-		try {
-			handler.executor.execute(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						invoke(event);
-					} catch (UnavailableException e) {
-						handler.eventDao.store(event);
-						logger.warn("{} unavailable. recall latter", e, event.getName());
-					} catch (Throwable e) {
-						event.discardLogger(e.toString());
-					}
-				}
-			});
-			return null;
-		} catch (RejectedExecutionException e) {
-			logger.info("TOO MANY TASK. ", e);
-			throw new UnavailableException("TOO MANY TASK. "+Objutil.systring(Constants.XUTILS_LOCALHOST));
-		}
-	}
-
-	protected abstract Object invoke(Event event) throws Throwable;
+public interface ServiceObject {
+	Object handle(final Event event) throws Throwable;
 }

@@ -27,22 +27,18 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.utils.ByteArray;
 
 /**
- *
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public final class Event implements Externalizable {
-	private static final Logger discardLogger = Logger.getLogger(Event.class);
-	private static final Object[] EMPTY_PARAMETERS={};
+	private static final Object[] EMPTY_PARAMETERS = {};
 	private static final byte[] EMPTY_BYTES = {};
 
 	private static final byte TYPE_NULL = 0;
@@ -78,17 +74,12 @@ public final class Event implements Externalizable {
 		return os.toByteArray();
 	}
 
-	public static Object unmarshall(InputStream is) throws Throwable {
-		Object o;
+	public static Object unmarshall(InputStream is) {
 		ObjectInputStream ois = null;
 		try {
 			int b = is.read();
-			if (b <= 0)
-				return null;
-			if (b == TYPE_SERIALIZABLE)
-				o = (ois = new ObjectInputStream(is)).readObject();
-			else
-				o = primitiveRead(b, new DataInputStream(is));
+			return b <= 0 ? null : (b == TYPE_SERIALIZABLE ? (ois = new ObjectInputStream(is)).readObject()
+					: primitiveRead(b, new DataInputStream(is)));
 		} catch (IOException e) {
 			throw new MSGException(e.toString());
 		} catch (ClassNotFoundException e) {
@@ -96,9 +87,6 @@ public final class Event implements Externalizable {
 		} finally {
 			Objutil.closeQuietly(ois);
 		}
-		if (o instanceof Throwable)
-			throw (Throwable) o;
-		return o;
 	}
 
 	private static int index(Class type) {
@@ -201,7 +189,6 @@ public final class Event implements Externalizable {
 
 	private transient Long id;
 	private transient volatile Object[] objects;
-	transient Event next;
 
 	public Event() {
 		// default
@@ -328,10 +315,12 @@ public final class Event implements Externalizable {
 		}
 		return objects;
 	}
+
 	@Override
 	public final void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
 		readFrom(in);
 	}
+
 	@Override
 	public final void writeExternal(ObjectOutput out) throws IOException {
 		writeTo(out);
@@ -377,22 +366,5 @@ public final class Event implements Externalizable {
 	@Override
 	public String toString() {
 		return name + " ,value=" + value;
-	}
-
-	void discardLogger(String cause) {
-		List<Object> list;
-		if (objects != null)
-			list = Arrays.asList(objects);
-		else if (datas == null || datas.length == 0)
-			list = Collections.emptyList();
-		else {
-			list = new ArrayList<Object>();
-			try {
-				deserial(datas, list);
-			} catch (Throwable ex) {
-				// ignore
-			}
-		}
-		discardLogger.info("{}: name={} ,value={} ,params={}", name, value, list);
 	}
 }

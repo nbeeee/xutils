@@ -17,6 +17,7 @@ package zcu.xutil.msg.impl;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -97,12 +98,15 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 			current = 0;
 		available = false;
 	}
+
 	@Override
 	public ServiceObject getSOBJ(String canonicalName) {
 		return null;
 	}
+
 	@Override
 	public Object sendToRemote(Event event, int timeoutMillis) throws Throwable {
+		Object ret;
 		HttpURLConnection conn = openConnection(timeoutMillis);
 		try {
 			DataOutputStream out = new DataOutputStream(conn.getOutputStream());
@@ -120,14 +124,23 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 				throw new MSGException("http status: " + code);
 			}
 			available = true;
-			return Event.unmarshall(conn.getInputStream());
+			InputStream in = conn.getInputStream();
+			try {
+				ret = Event.unmarshall(in);
+			} finally {
+				Objutil.closeQuietly(in);
+			}
+			
 		} catch (IOException e) {
 			throw new MSGException(e.toString());
 		} finally {
 			conn.disconnect();
 		}
-
+		if (ret instanceof Throwable)
+			throw (Throwable) ret;
+		return ret;
 	}
+
 	@Override
 	public void destroy() {
 		if (destroyed)
@@ -135,6 +148,7 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 		destroyed = true;
 		eventDao.destroy();
 	}
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T extends Remote> T create(Class<T> iface, final int timeoutMillis) {
@@ -147,11 +161,14 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 					return ret;
 				Event event = new Event(cname, Util.signature(m.getName(),m.getParameterTypes()), args);
 				event.syncall = true;
+				if (destroyed)
+					throw new IllegalStateException("Broker destroyed.");
 				return sendToRemote(event, timeoutMillis);
 			}
 		};
 		return (T) Proxy.newProxyInstance(iface.getClassLoader(), new Class[] { iface }, h);
 	}
+
 	@Override
 	public GroupService create(String serviceName, final boolean sendprefer, final int expireMinutes) {
 		final String cname = serviceName.intern();
@@ -159,10 +176,10 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 			@Override
 			public void service(String value, Object... params) {
 				Event event = new Event(cname, value, params);
-				if (destroyed)
-					throw new IllegalStateException("Broker destroyed.");
 				if (expireMinutes > 0)
 					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
+				if (destroyed)
+					throw new IllegalStateException("Broker destroyed.");
 				if (sendprefer && available)
 					try {
 						sendToRemote(event, 0);

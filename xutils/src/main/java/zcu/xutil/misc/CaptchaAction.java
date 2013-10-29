@@ -81,6 +81,7 @@ public class CaptchaAction implements Action {
 	}
 
 	public String randomNumber(int length) {
+		Objutil.validate(length > 0 && length < 10, "length > 0 && length <10");
 		int tenth = (int) Math.pow(10, length - 1);
 		return String.valueOf(tenth + random.nextInt(tenth * 9));
 	}
@@ -102,8 +103,8 @@ public class CaptchaAction implements Action {
 		for (int i = 0; i < chars.length; i++)
 			g2d.drawChars(chars, i, 1, i * xGap + random.nextInt(xGap / 2), fontsize + random.nextInt(fontsize));
 		for (int i = 0, len = chars.length * 2; i < len; i++) {
-			int p = Math.abs(random.nextInt());
-			int q = Math.abs(random.nextInt());
+			int p = random.nextInt(Integer.MAX_VALUE);
+			int q = random.nextInt(Integer.MAX_VALUE);
 			g2d.setColor(new Color(p % 255, q % 255, (p ^ q) % 255));
 			g2d.drawLine(p % width, 0, q % width, height);
 		}

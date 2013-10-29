@@ -254,7 +254,10 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 	public Object sendToRemote(Event event, int timeoutMillis) throws Throwable {
 		Message msg = toMessage(event);
 		byte[] buf = select(event.getName()).dispatch(msg, timeoutMillis);
-		return buf.length == 0 ? null : Event.unmarshall(ByteArray.toStream(buf));
+		Object ret = buf.length == 0 ? null : Event.unmarshall(ByteArray.toStream(buf));
+		if(ret instanceof Throwable)
+			throw (Throwable)ret;
+		return ret;
 	}
 	@Override
 	public byte[] proxy(Event event) {
@@ -283,8 +286,6 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			throw new UnavailableException(event.getName());
 		try {
 			return Event.marshall(sobj.handle(event));
-		} catch (MSGException e) {
-			throw e;
 		} catch (Throwable e) {
 			clearStack(e);
 			return Event.marshall(e);
@@ -366,10 +367,10 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			@Override
 			public void service(String value, Object... params) {
 				Event event = new Event(cname, value, params);
-				if (destroyed)
-					throw new IllegalStateException("Broker destroyed.");
 				if (expireMinutes > 0)
 					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
+				if (destroyed)
+					throw new IllegalStateException("Broker destroyed.");
 				if (sendprefer)
 					try {
 						ServiceObject sobj = getSOBJ(event.getName());
@@ -512,7 +513,10 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			event.syncall = true;
 			Objutil.validate(isValid() && services.containsKey(name), "invalid service.{}", this);
 			byte[] buf = dispatch(toMessage(event), timeoutMillis);
-			return buf.length == 0 ? null : Event.unmarshall(ByteArray.toStream(buf));
+			Object ret = buf.length == 0 ? null : Event.unmarshall(ByteArray.toStream(buf));
+			if(ret instanceof Throwable)
+				throw (Throwable)ret;
+			return ret;
 		}
 
 		byte[] dispatch(Message msg, int timeout) {
@@ -526,8 +530,6 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			}
 			if (o instanceof byte[])
 				return (byte[]) o;
-			if (o instanceof MSGException)
-				throw (MSGException) o;
 			throw new MSGException("unexpected retval:" + o);
 		}
 

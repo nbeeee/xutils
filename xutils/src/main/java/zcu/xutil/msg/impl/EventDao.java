@@ -16,11 +16,11 @@
 package zcu.xutil.msg.impl;
 
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Deque;
 import java.util.List;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,6 +46,8 @@ import zcu.xutil.utils.Util;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public final class EventDao implements Runnable {
+	private static final Logger discardLogger = Logger.getLogger(Event.class);
+
 	static final Handler<List<Event>> listHandle = new BeanRow<Event>(Event.class).list(25, 50);
 	static final Logger logger = Logger.getLogger(EventDao.class);
 	static final String create = "CREATE TABLE EVENT (ID IDENTITY,NAME VARCHAR(100),VALUE VARCHAR(100),"
@@ -59,10 +61,11 @@ public final class EventDao implements Runnable {
 
 	final Query query;
 	final BrokerAgent broker;
-	final AtomicInteger total = new AtomicInteger();
 	private final NpSQL insert;
+	private final AtomicInteger discardNumber = new AtomicInteger();
 	private final AtomicReference<Service[]> allService;
 	private volatile Thread worker; // blinker moribund
+	
 
 	public EventDao(final String name, DataSource ds, final BrokerAgent agent) {
 		if (ds == null) {
@@ -143,13 +146,23 @@ public final class EventDao implements Runnable {
 		} while (allService.compareAndSet(array, news));
 	}
 
+	void discardLogger(Event event, Object cause) {
+		discardNumber.getAndIncrement();
+		Object params;
+		try {
+			params = event.parameters();
+		} catch (Throwable ex) {
+			params = ex;
+		}
+		discardLogger.warn("{}: name={} ,value={} ,params={}", cause, event.getName(), event.getValue(), params);
+	}
+
 	@Override
 	public void run() {
 		long current, lastClearMillis = current = Util.now();
 		int index = Integer.MAX_VALUE, sleepMillis = 5000;
 		while (worker != null) {
 			try {
-				int number = total.get();
 				if (sleepMillis > 0) {
 					if (current - lastClearMillis > 60000) {
 						lastClearMillis = current;
@@ -161,14 +174,15 @@ public final class EventDao implements Runnable {
 					}
 				}
 				Service[] array = allService.get();
+				int count = 0;
 				current = Util.now();
 				for (int tail, i = tail = array.length - 1; i >= 0; i--) {
-					Service s = array[index = index < tail ? index + 1 : 0];
-					if (current > s.untilMillis)
-						s.sentEvents(current);
+					Service service = array[index = index < tail ? index + 1 : 0];
+					if (service.sendRequired(current))
+						count += service.send();
 				}
-				if ((number = total.get() - number) > 0) {
-					sleepMillis = number > 9 ? 0 : 1000;
+				if (count > 0) {
+					sleepMillis = count > 9 ? 0 : 1000;
 				} else if (sleepMillis < 8000)
 					sleepMillis += 2000;
 			} catch (Throwable e) {
@@ -176,24 +190,25 @@ public final class EventDao implements Runnable {
 				logger.warn("!!!!!!!!! exception !!!!!!!!!", e);
 			}
 		}
+		current = Util.now();
 		for (Service s : allService.get()) {
 			try {
-				s.sentEvents(current);
+				s.load(current);
+				s.send();
 			} catch (SQLException e) {
 				break;
 			} catch (Throwable e) {
 				// ignore
 			}
 		}
-		logger.info("SendDaemon shutdown. Total={} Names:{}", total, allService);
+		logger.warn("SendDaemon shutdown.discard number:{} , Names:{}", discardNumber, allService.get());
 	}
 
-	final class Service implements Runnable {
-		private final AtomicBoolean running = new AtomicBoolean();
+	private final class Service {
 		final String canonicalName;
-		private Event head;
-		private ServiceObject sobj;
-		volatile long untilMillis;
+		final Deque<Event> events = new ArrayDeque<Event>();
+		private int sendNumber;
+		private long untilMillis;
 
 		Service(String name) {
 			this.canonicalName = name.intern();
@@ -201,90 +216,58 @@ public final class EventDao implements Runnable {
 
 		@Override
 		public String toString() {
-			return head != null ? canonicalName.concat("#####") : canonicalName;
+			return canonicalName + " send " + sendNumber;
 		}
 
-		void sentEvents(long current) throws Throwable {
-			if (loadIfNecessary() == null) {
+		boolean sendRequired(long current) throws SQLException {
+			if (current < untilMillis)
+				return false;
+			if (events.isEmpty())
+				load(current);
+			if (events.isEmpty()) {
 				untilMillis = current + 4000;
-				return;
+				return false;
 			}
-			if (sobj != null || (sobj = broker.getSOBJ(canonicalName)) != null) {
-				try {
-					sobj.handler.executor.execute(this);
-				} catch (RejectedExecutionException e) {
-					untilMillis = current + 4000;
-					logger.info("TOO MANY TASK. ", e);
-				}
-				return;
+			return true;
+		}
+
+		void load(long current) throws SQLException {
+			List<Event> ret = query.query(retrieve, listHandle, canonicalName);
+			for (Event e : ret) {
+				e.setName(canonicalName);
+				if (e.getExpire().getTime() < current) {
+					query.update(updateToSent, e.getId());
+					discardLogger(e, "expire");
+				} else
+					events.add(e);
 			}
-			for (Event event = head; event != null; event = okAndNext(event)) {
+		}
+
+		int send() throws Throwable {
+			Event event;
+			int count = 0;
+			ServiceObject sobj = broker.getSOBJ(canonicalName);
+			while ((event = events.peekFirst()) != null) {
 				try {
-					broker.sendToRemote(event, 0);
+					if (sobj == null)
+						broker.sendToRemote(event, 0);
+					else
+						sobj.handle(event);
+					sendNumber++;
 				} catch (IllegalMsgException e) {
-					event.discardLogger(e.toString());
+					discardLogger(event, e);
 				} catch (UnavailableException e) {
-					untilMillis = current + 4000;
-					logger.warn("{} unavailable. recall latter", e, event.getName());
+					untilMillis = Util.now() + 4000;
+					logger.warn("service unavailable. {}", e, event.getName());
 					break;
 				} catch (Throwable e) {
 					throw e;
 				}
-			}
-		}
-
-		@Override
-		public void run() {
-			if (running.compareAndSet(false, true))
-				try {
-					for (Event event = head; event != null; event = okAndNext(event)) {
-						try {
-							sobj.invoke(event);
-						} catch (UnavailableException e) {
-							untilMillis = Util.now() + 8000;
-							logger.warn("{} unavailable. recall latter", e, event.getName());
-							break;
-						} catch (Throwable e) {
-							event.discardLogger(e.toString());
-						}
-					}
-				} finally {
-					running.set(false);
-				}
-		}
-
-		Event okAndNext(Event event) {
-			try {
-				head = event.next;
+				events.remove();
 				query.update(updateToSent, event.getId());
-				total.getAndIncrement();
-				return head;
-			} catch (SQLException e) {
-				throw new XutilRuntimeException(e);
+				count++;
 			}
-		}
-
-		Event loadIfNecessary() throws SQLException {
-			while (head == null) {
-				List<Event> ret = query.query(retrieve, listHandle, canonicalName);
-				int size = ret.size();
-				if(size ==0)
-					return null;
-				Event tmp, next = null;
-				long current = Util.now();
-				while (--size >= 0) {
-					tmp = ret.get(size);
-					if (tmp.getExpire().getTime() < current) {
-						query.update(updateToSent, tmp.getId());
-						tmp.discardLogger("expire");
-					} else {
-						tmp.next = next;
-						(next = tmp).setName(canonicalName);
-					}
-				}
-				head = next;
-			}
-			return head;
+			return count;
 		}
 	}
 }

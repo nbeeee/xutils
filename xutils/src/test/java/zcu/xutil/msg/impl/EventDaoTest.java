@@ -27,6 +27,33 @@ import zcu.xutil.sql.MiniDataSource;
 
 public class EventDaoTest {
 	private static final Logger logger = Logger.getLogger(EventDaoTest.class);
+	public final BrokerAgent broekr = new BrokerAgent(){
+
+		@Override
+		public ServiceObject getSOBJ(String canonicalName) {
+			return !"local".equals(canonicalName) ? null :
+			new ServiceObject(){
+
+				@Override
+				public Object handle(Event event) throws Throwable {
+					targetlocal = event;
+					logger.info("local: {}" ,event);
+					return null;
+				}
+	
+				
+			};
+		}
+
+		@Override
+		public Object sendToRemote(Event canonical, int timeoutMillis) throws Throwable {
+			targetremote = canonical;
+			logger.info("remote: {}" ,canonical);
+			return null;
+		}
+		
+	};
+	
 
 	@Before
 	public void setUp() throws Exception {
@@ -37,41 +64,36 @@ public class EventDaoTest {
 	public void tearDown() throws Exception {
 
 	}
-
+	
+	final Event local= new Event("local", "eventValue", 3.14, new Date());
+	final Event remote= new Event("remote", null, Integer.MAX_VALUE, Long.MAX_VALUE);
+	volatile Event targetlocal,targetremote;
 	@Test
 	public void testAll() {
-		EventDao eventDao = new EventDao("eventDao",null,null);
-
+		EventDao eventDao = new EventDao("eventDao",null,broekr);
+		eventDao.start();
+		eventDao.store(local);
+		eventDao.store(remote);
+		
 		try {
-			Event entity = new Event("eventName", "eventValue", 3.14, new Date());
-			eventDao.store(entity);
-			EventDao.Service service = eventDao.new Service("eventName");
-			Event event, queue =event= service.loadIfNecessary();
-			int count =0;
-			while(queue!=null){
-				if (queue.getId().equals(entity.getId())) {
-					logger.info("found event:{}", queue);
-					assertEquals(entity.getId(), queue.getId());
-					assertSame("eventName", queue.getName());
-					assertEquals(entity.getValue(), queue.getValue());
-				}
-				count++;
-				queue=queue.next;
+			for(int i = 0 ; i < 10;i++ ){
+				if(targetlocal == null || targetremote==null)
+					Thread.sleep(1000);
+				else
+					break;
 			}
-			logger.info("unsend eventName size number:{}", count);
-			service.okAndNext(event);
-			logger.info("delete stale event {}",eventDao.query.update(EventDao.delete));
-			entity = new Event("eventName", "value", 666, new Date());
+			assertArrayEquals(local.parameters(), targetlocal.parameters());
+			assertEquals(local.getName(), targetlocal.getName());
+			assertEquals(local.getValue(), targetlocal.getValue());
+			assertEquals(local.getExpire(), targetlocal.getExpire());
+			assertArrayEquals(remote.parameters(), targetremote.parameters());
+			assertEquals(remote.getName(), targetremote.getName());
+			assertEquals(remote.getValue(), targetremote.getValue());
+			assertEquals(remote.getExpire(), targetremote.getExpire());
+		} catch (InterruptedException e) {
 
-			eventDao.store(entity);
-			entity.setExpire(new Date());
-			eventDao.store(entity);
-			logger.info("insert last: {},{}", entity.getId(), entity);
-		} catch (SQLException e) {
-
-			e.printStackTrace();
 			fail(e.getMessage());
-		} finally {
+		}finally {
 			eventDao.destroy();
 		}
 	}

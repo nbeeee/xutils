@@ -31,7 +31,10 @@
   <logger name="zcu.xutil">
      <level value="debug"/>
   </logger>
-
+ <logger name="zcu.xutil.msg.impl.Event">
+     <level value="debug"/>
+     <appender-ref ref="FILE"/>
+  </logger>
   <logger name="remote" additivity="false">
      <level value="debug"/>
      <appender-ref ref="REMOTE"/>

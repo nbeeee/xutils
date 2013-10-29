@@ -20,18 +20,21 @@ import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.msg.GroupService;
 import zcu.xutil.utils.ProxyHandler;
 import zcu.xutil.utils.Util;
 
 public final class Handler implements ThreadFactory {
+	static final Logger logger = Logger.getLogger(Handler.class);
 	private static final int CORE_POOL_SIZE = 8;
 	private static final AtomicInteger counter = new AtomicInteger();
 	final ThreadPoolExecutor executor;
@@ -63,14 +66,13 @@ public final class Handler implements ThreadFactory {
 		Map<String, ServiceObject> mp = new HashMap<String, ServiceObject>();
 		for (Map.Entry<String, ? extends GroupService> e : groupServices.entrySet()) {
 			String serviceName = e.getKey().intern();
-			Objutil.validate(mp.put(serviceName, new GS(this, e.getValue())) == null, "duplicated name: {}",
-					serviceName);
+			Objutil.validate(mp.put(serviceName, new Group(e.getValue())) == null, "duplicated name: {}", serviceName);
 		}
 		for (Remote obj : interfaceservice) {
 			int size = mp.size();
-			for (Class itf :ProxyHandler.getInterfaces(obj.getClass())) {
+			for (Class itf : ProxyHandler.getInterfaces(obj.getClass())) {
 				if (Remote.class.isAssignableFrom(itf))
-					Objutil.validate(mp.put(itf.getName(), new MS(this, itf, obj)) == null, "duplicated name: {}", itf);
+					Objutil.validate(mp.put(itf.getName(), new Iface(itf, obj)) == null, "duplicated name: {}", itf);
 			}
 			Objutil.validate(size < mp.size(), "{}: not found interface extend Remote.", obj);
 		}
@@ -79,12 +81,11 @@ public final class Handler implements ThreadFactory {
 		return mp;
 	}
 
-	private static final class MS extends ServiceObject {
-		private final Map<String, Method> maps = new HashMap<String, Method>();
-		private final Object service;
+	private final class Iface implements ServiceObject {
+		final Map<String, Method> maps = new HashMap<String, Method>();
+		final Object service;
 
-		MS(Handler h, Class iface, Object _service) {
-			super(h);
+		Iface(Class iface, Object _service) {
 			this.service = _service;
 			for (Method m : iface.getMethods()) {
 				Objutil.validate(maps.put(Util.signature(m.getName(), m.getParameterTypes()), m) == null,
@@ -93,33 +94,74 @@ public final class Handler implements ThreadFactory {
 			}
 		}
 
-		@Override
-		protected Object invoke(Event event) throws Throwable {
-			Method method = maps.get(event.getValue());
+		public Object handle(final Event event) throws Throwable {
+			final Method method = maps.get(event.getValue());
 			if (method == null)
 				throw new IllegalMsgException("method not found. " + event);
-			Object[] params = event.parameters();
+			final Object[] params = event.parameters();
+			if (event.syncall)
+				try {
+					return method.invoke(service, params);
+				} catch (InvocationTargetException e) {
+					throw e.getCause();
+				} catch (Throwable e) {
+					throw new IllegalMsgException("marshal exception: " + e);
+				}
 			try {
-				return method.invoke(service, params);
-			} catch (InvocationTargetException e) {
-				throw e.getCause();
-			} catch (Throwable e) {
-				throw new IllegalMsgException("marshal exception: " + e);
+				executor.execute(new Runnable() {
+					@Override
+					public void run() {
+						try {
+							method.invoke(service, params);
+						} catch (InvocationTargetException e) {
+							Throwable cause = e.getCause();
+							if (cause instanceof UnavailableException) {
+								eventDao.store(event);
+								logger.warn("{} unavailable.", e, event.getName());
+							} else
+								eventDao.discardLogger(event, cause);
+						} catch (Throwable e) {
+							eventDao.discardLogger(event, e);
+						}
+					}
+				});
+			} catch (RejectedExecutionException e) {
+				logger.info("TOO MANY TASK. ", e);
+				throw new UnavailableException("TOO MANY TASK.");
 			}
+			return Objutil.defaults(method.getReturnType());
 		}
 	}
 
-	private static final class GS extends ServiceObject {
-		private final GroupService service;
+	private final class Group implements ServiceObject {
+		final GroupService service;
 
-		GS(Handler h, GroupService gs) {
-			super(h);
+		Group(GroupService gs) {
 			this.service = gs;
 		}
 
-		@Override
-		protected Object invoke(Event event) throws Throwable {
-			service.service(event.getValue(), event.parameters());
+		public Object handle(final Event event) {
+			if (event.syncall)
+				service.service(event.getValue(), event.parameters());
+			else
+				try {
+					executor.execute(new Runnable() {
+						@Override
+						public void run() {
+							try {
+								service.service(event.getValue(), event.parameters());
+							} catch (UnavailableException e) {
+								eventDao.store(event);
+								logger.warn("{} unavailable.", e, event.getName());
+							} catch (Throwable e) {
+								eventDao.discardLogger(event, e);
+							}
+						}
+					});
+				} catch (RejectedExecutionException e) {
+					logger.info("TOO MANY TASK. ", e);
+					throw new UnavailableException("TOO MANY TASK.");
+				}
 			return null;
 		}
 	}
