@@ -246,7 +246,7 @@ public final class EventDao implements Runnable {
 		int send() throws Throwable {
 			Event event;
 			int count = 0;
-			ServiceObject sobj = broker.getSOBJ(canonicalName);
+			ServiceObject sobj = broker.getLocalService(canonicalName);
 			while ((event = events.peekFirst()) != null) {
 				try {
 					if (sobj == null)

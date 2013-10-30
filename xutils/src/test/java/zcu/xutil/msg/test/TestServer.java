@@ -14,7 +14,7 @@ import zcu.xutil.msg.impl.Handler;
 
 public class TestServer implements TestService {
 
-	public Object call(int i) throws RemoteException {
+	public Object call(int i)  {
 		Logger.LOG.info("TestServer {}   ", i);
 		int mod = i%3;
 		return mod==0 ? i : (mod==1 ? new Date() : "eeeee"+i);
@@ -29,7 +29,7 @@ public class TestServer implements TestService {
 		remotelog.warn("=================");
 
 		remotelog.warn("=================");
-		BrokerFactory.instance().startServer(Collections.<String,GroupService>singletonMap(XLoggerService.class.getName(), new XLoggerService()),new TestServer(),new RemoteServiceImpl());
+		BrokerFactory.instance().startServer(new XLoggerService(),new TestServer(),new RemoteServiceImpl());
 		remotelog.warn("=================");
 		remotelog.warn("=================333333");
 		Logger.getLogger("remote").warn("1111111111111111111");
@@ -47,15 +47,15 @@ public class TestServer implements TestService {
 		BrokerFactory.instance().setNotification(notify);
 		BrokerFactory.instance().addListener(notify);
 
-		RemoteService rs = BrokerFactory.instance().create(RemoteService.class,0);
-		ExceptionService es =BrokerFactory.instance().create(ExceptionService.class,0);
+		RemoteService rs = BrokerFactory.instance().create(RemoteService.class);
+		ExceptionService es =BrokerFactory.instance().create(ExceptionService.class);
 
 		int i=0;
 		while(true){
 			String str="TESTSERVER: "+i;
 			try{
 				rs.ansyCall(new Date(), str);
-				Logger.LOG.info("TestServer call hello return:{}",rs.hello("TESTSERVR", i));
+				rs.hello("1111", i);
 				BrokerFactory.instance().sendToAll(true,"TestServer multicast",str);
 
 			}catch(Exception e){

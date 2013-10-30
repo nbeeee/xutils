@@ -18,7 +18,6 @@
   </appender>
 
   <appender name="REMOTE" class="zcu.xutil.misc.RemoteAppender">
-    <sendprefer>false</sendprefer>
     <httpmode>false</httpmode>
     <includeCallerData>false</includeCallerData>
   </appender>
@@ -29,9 +28,6 @@
   </root>
 
   <logger name="zcu.xutil">
-     <level value="debug"/>
-  </logger>
- <logger name="zcu.xutil.msg.impl.Event">
      <level value="debug"/>
      <appender-ref ref="FILE"/>
   </logger>

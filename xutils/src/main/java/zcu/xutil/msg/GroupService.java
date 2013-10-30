@@ -15,7 +15,17 @@
  */
 package zcu.xutil.msg;
 
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-public interface GroupService {
-	void service(String value,Object... params);
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+@Retention(RUNTIME)
+@Target(ElementType.TYPE)
+public @interface GroupService {
+	boolean asyncall() default false;
+	boolean sendprefer() default false;
+	int timeoutMillis() default 0;
+	int expireMinutes() default 0;
 }

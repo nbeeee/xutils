@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import zcu.xutil.Constants;
 import zcu.xutil.Objutil;
-import zcu.xutil.msg.GroupService;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
@@ -30,7 +29,7 @@ import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.joran.spi.JoranException;
 import ch.qos.logback.core.util.StatusPrinter;
 
-public class XLoggerService implements GroupService {
+public class XLoggerService implements LogService {
 	private final LoggerContext context;
 
 	public XLoggerService() {
@@ -51,14 +50,15 @@ public class XLoggerService implements GroupService {
 					throw new IllegalArgumentException("not allow appender: ".concat(RemoteAppender.class.getName()));
 		}
 	}
+
 	@Override
-	public void service(String value, Object... params) {
-		ILoggingEvent event = (ILoggingEvent) params[0];
+	public void log(String addr, ILoggingEvent event) {
 		Logger remoteLogger = context.getLogger(event.getLoggerName());
 		// apply the logger-level filter
 		if (remoteLogger.isEnabledFor(event.getLevel())) {
-			event.getLoggerContextVO().getPropertyMap().put("xaddr", value);
+			event.getLoggerContextVO().getPropertyMap().put("xaddr", addr);
 			remoteLogger.callAppenders(event);// finally log the event as if was
 		}
+		
 	}
 }

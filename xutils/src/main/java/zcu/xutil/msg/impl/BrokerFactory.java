@@ -57,7 +57,6 @@ public class BrokerFactory {
 
 	String clusterName = Objutil.systring(XUTILS_MSG_CHANNEL_ID, "groupmsg");
 	int serverStamp = Objutil.systring(XUTILS_MSG_SERVERSTAMP,0);
-	int clientStamp = Objutil.systring(XUTILS_MSG_CLIENTSTAMP,0);
 	int maxPoolSize = Objutil.systring(XUTILS_MSG_MAXPOOLSIZE, 100);
 	String config = Objutil.systring(XUTILS_MSG_CONFIG, CONFIG);
 	String nodeName = Objutil.systring(XUTILS_MSG_NODENAME);
@@ -73,10 +72,6 @@ public class BrokerFactory {
 
 	public final void setServerStamp(int serverstamp) {
 		this.serverStamp = serverstamp;
-	}
-
-	public final void setClientStamp(int clientstamp) {
-		this.clientStamp = clientstamp;
 	}
 
 	public final void setMaxPoolSize(int maxpool) {

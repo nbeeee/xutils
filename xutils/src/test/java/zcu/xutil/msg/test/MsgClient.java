@@ -1,5 +1,6 @@
 ﻿package zcu.xutil.msg.test;
 
+import java.sql.SQLException;
 import java.util.Date;
 
 import zcu.xutil.Logger;
@@ -11,6 +12,8 @@ import zcu.xutil.utils.Util;
 public class MsgClient implements Runnable{
 	static Logger logger = Logger.getLogger(MsgClient.class);
 	RemoteService rs;
+	ExceptionService es ;
+	TestService ts;
 	MsgClient(RemoteService rs){
 		this.rs=rs;
 	}
@@ -28,13 +31,12 @@ public class MsgClient implements Runnable{
 		Notify notify = new Notify();
 		BrokerFactory.instance().setNotification(notify);
 		BrokerFactory.instance().addListener(notify);
-		RemoteService rs = BrokerFactory.instance().create(RemoteService.class,0);
-		ExceptionService es = BrokerFactory.instance().create(ExceptionService.class,0);
+		RemoteService rs = BrokerFactory.instance().create(RemoteService.class);
+		ExceptionService es = BrokerFactory.instance().create(ExceptionService.class);
+		TestService ts =BrokerFactory.instance().create(TestService.class);
+
 		logger.info("members:{}",BrokerFactory.instance().getMembers());
 		logger.info("to String:{}",rs);
-
-		GroupService as1 = BrokerFactory.instance().create(RemoteService.class.getName(), false,0);
-		String methsign = Util.signature("ansyCall", Date.class,String.class);
 
 		try {
 			Thread.sleep(1000);
@@ -42,7 +44,10 @@ public class MsgClient implements Runnable{
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		new Thread(new MsgClient(rs),"ClientThread").start();
+		MsgClient mclient= new MsgClient(rs);
+		mclient.ts=ts;
+		mclient.es=es;
+		new Thread(mclient,"ClientThread").start();
 		String str ="MSGCLIENT";
 
 		Logger remotelog =Logger.getLogger("remote");
@@ -51,16 +56,11 @@ public class MsgClient implements Runnable{
 			Date date = new Date();
 
 			remotelog.info("MSGCLIENT : {} {}",date,i );
-			try {
-				logger.info("syncCall returned: {}", rs.hello(str,i));
-			} catch (Exception e) {
-				logger.warn("!!!!!!! fail hello num: {} err: {}", i,e);
-			}
+			rs.hello(str,i);
 			try{
-				as1.service(methsign, date, "MSGCLIENT:"+i);
 				es.ansyException(i);
 			} catch (Exception e) {
-				logger.warn("!!!!!! fail ansyCall", date);
+				logger.warn("!!!!!! fail ansyCall {}", e,date);
 			}
 			BrokerFactory.instance().sendToAll(true,"MSGCLIENT multicast",str);
 			try {
@@ -77,17 +77,17 @@ public class MsgClient implements Runnable{
 		String str ="MSGCLIENT MSGCLIENT: ";
 		for (int i = 0; true; i++) {
 			Date date = new Date();
+			rs.ansyCall(date, str);
+			rs.hello(str, i);
+			es.ansyException(i);
 			try {
-				logger.info("syncCall returned: {}", rs.hello(str,i));
-			} catch (Exception e) {
-				logger.warn("!!!!!!! fail hello num: {} err: {}", i,e.getMessage());
+				es.syncException(i);
+			} catch (SQLException e1) {
+				// TODO Auto-generated catch block
+				logger.warn("!!!!!! fail ansyCall", e1);
 			}
-			try{
-				rs.ansyCall(date, str+ i);
-				logger.info("ansyCall: {}",date);
-			} catch (Exception e) {
-				logger.warn("!!!!!! fail ansyCall", date);
-			}
+			ts.call(i);
+			ts.signal(i, true, i, i, 'c', new byte[]{1,2,3});
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {

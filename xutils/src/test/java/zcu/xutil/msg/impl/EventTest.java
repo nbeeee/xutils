@@ -413,6 +413,7 @@ public class EventTest implements Serializable {
 
 		Long apply(String s);
 	}
+	@GroupService
 	interface AAA extends java.rmi.Remote{
 		
 	}
@@ -422,7 +423,7 @@ public class EventTest implements Serializable {
 	public static void main(String[] args) {
 		Handler h = new Handler(1,null);
 				
-		Map map =h.initiate(Collections.EMPTY_MAP, new java.rmi.Remote[]{new AAA(){},new BBB(){}});
+		Map map =h.initiate(new java.rmi.Remote[]{new AAA(){},new BBB(){}});
 		System.out.println(map);
 		new Event();
 		System.out.println(deserialize(serialize(NULL)));

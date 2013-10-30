@@ -24,7 +24,6 @@ import java.lang.reflect.Proxy;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.rmi.Remote;
 import java.util.List;
 
 import zcu.xutil.Disposable;
@@ -41,6 +40,7 @@ import zcu.xutil.utils.Util;
 import zcu.xutil.utils.ProxyHandler;
 
 final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
+	static final Logger logger = Logger.getLogger(HttpBrokerImpl.class);
 	private final URL[] urls;
 	private final String credentials;
 	private int current;
@@ -86,7 +86,7 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 			} catch (IOException e) {
 				if (++current >= urls.length)
 					current = 0;
-				Logger.LOG.info("HttpBrokerImpl connect fail. {}", e, url);
+				logger.info("connect fail. {}", e, url);
 			}
 		}
 		available = false;
@@ -100,7 +100,7 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 	}
 
 	@Override
-	public ServiceObject getSOBJ(String canonicalName) {
+	public ServiceObject getLocalService(String canonicalName) {
 		return null;
 	}
 
@@ -130,7 +130,7 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 			} finally {
 				Objutil.closeQuietly(in);
 			}
-			
+
 		} catch (IOException e) {
 			throw new MSGException(e.toString());
 		} finally {
@@ -151,7 +151,12 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T extends Remote> T create(Class<T> iface, final int timeoutMillis) {
+	public <T> T create(Class<T> iface) {
+		GroupService gs = Objutil.notNull(iface.getAnnotation(GroupService.class), "not a groupservice", iface);
+		final boolean syncmode = !gs.asyncall();
+		final boolean sendprefer = gs.sendprefer();
+		final int timeoutMillis = gs.timeoutMillis();
+		final int expireMinutes = gs.expireMinutes();
 		final String cname = iface.getName().intern();
 		InvocationHandler h = new InvocationHandler() {
 			@Override
@@ -159,36 +164,28 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 				Object ret = ProxyHandler.proxyObjectMethod(proxy, m, args);
 				if (ret != null)
 					return ret;
-				Event event = new Event(cname, Util.signature(m.getName(),m.getParameterTypes()), args);
-				event.syncall = true;
+				Event event = new Event(cname, Util.signature(m.getName(), m.getParameterTypes()), args);
 				if (destroyed)
 					throw new IllegalStateException("Broker destroyed.");
-				return sendToRemote(event, timeoutMillis);
+				if (event.syncall = syncmode)
+					return sendToRemote(event, timeoutMillis);
+				ret = Objutil.defaults(m.getReturnType());
+				if (expireMinutes > 0)
+					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
+				try {
+					if (sendprefer && available)
+						sendToRemote(event, timeoutMillis);
+					return ret;
+				} catch (IllegalMsgException e) {
+					eventDao.discardLogger(event, e);
+					return ret;
+				} catch (Throwable e) {
+					logger.debug("prefer send fail. store event: {}", e, event);
+				}
+				eventDao.store(event);
+				return ret;
 			}
 		};
 		return (T) Proxy.newProxyInstance(iface.getClassLoader(), new Class[] { iface }, h);
-	}
-
-	@Override
-	public GroupService create(String serviceName, final boolean sendprefer, final int expireMinutes) {
-		final String cname = serviceName.intern();
-		return new GroupService() {
-			@Override
-			public void service(String value, Object... params) {
-				Event event = new Event(cname, value, params);
-				if (expireMinutes > 0)
-					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
-				if (destroyed)
-					throw new IllegalStateException("Broker destroyed.");
-				if (sendprefer && available)
-					try {
-						sendToRemote(event, 0);
-						return;
-					} catch (Throwable e) {
-						// ignore
-					}
-				eventDao.store(event);
-			}
-		};
 	}
 }

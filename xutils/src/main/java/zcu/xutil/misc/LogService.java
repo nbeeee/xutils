@@ -1,4 +1,5 @@
-﻿/*
+
+/*
  * Copyright 2009 zaichu xiao
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-package zcu.xutil.msg.impl;
+ */package zcu.xutil.misc;
 
-public interface BrokerAgent {
-	ServiceObject getLocalService(String canonicalName);
+import zcu.xutil.msg.GroupService;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 
-	Object sendToRemote(Event canonical, int timeoutMillis) throws Throwable;
-
+@GroupService(asyncall=true,sendprefer=true)
+public interface LogService {
+	void log(String addr,ILoggingEvent event);
 }

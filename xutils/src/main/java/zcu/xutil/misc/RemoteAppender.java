@@ -17,7 +17,6 @@ package zcu.xutil.misc;
 
 import zcu.xutil.Constants;
 import zcu.xutil.Objutil;
-import zcu.xutil.msg.GroupService;
 import zcu.xutil.msg.impl.BrokerFactory;
 import zcu.xutil.msg.impl.HttpBrokerFactory;
 import ch.qos.logback.classic.net.LoggingEventPreSerializationTransformer;
@@ -25,9 +24,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 
 public final class RemoteAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
-	private volatile boolean sendprefer = true;
 	private volatile boolean httpmode;
-	private volatile GroupService service;
+	private volatile LogService service;
 	private boolean includeCallerData;
 	private final LoggingEventPreSerializationTransformer pst = new LoggingEventPreSerializationTransformer();
 	private final String address = Objutil.systring(Constants.XUTILS_LOCALHOST);
@@ -38,20 +36,16 @@ public final class RemoteAppender extends UnsynchronizedAppenderBase<ILoggingEve
 	        return;
 	    if(includeCallerData)
 	    	event.getCallerData();
-	    getService().service(address, pst.transform(event));
+	    getService().log(address, (ILoggingEvent)pst.transform(event));
 	}
 
-	private GroupService getService() {
+	private LogService getService() {
 		if (service == null)
 			synchronized (this) {
 				if (service == null)
-					service = ((httpmode ? HttpBrokerFactory.instance() : BrokerFactory.instance())).create(XLoggerService.class.getName(), sendprefer,0);
+					service = ((httpmode ? HttpBrokerFactory.instance() : BrokerFactory.instance())).create(LogService.class);
 			}
 		return service;
-	}
-
-	public void setSendprefer(boolean b) {
-		this.sendprefer = b;
 	}
 
 	public void setHttpmode(boolean b) {

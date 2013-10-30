@@ -30,7 +30,7 @@ public class EventDaoTest {
 	public final BrokerAgent broekr = new BrokerAgent(){
 
 		@Override
-		public ServiceObject getSOBJ(String canonicalName) {
+		public ServiceObject getLocalService(String canonicalName) {
 			return !"local".equals(canonicalName) ? null :
 			new ServiceObject(){
 

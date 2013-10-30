@@ -4,8 +4,10 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.sql.SQLException;
 
+import zcu.xutil.msg.GroupService;
 
-public interface ExceptionService extends Remote{
-	int syncException(int i) throws RemoteException,SQLException;
+@GroupService
+public interface ExceptionService {
+	int syncException(int i) throws SQLException;
 	void ansyException(int i);
 }

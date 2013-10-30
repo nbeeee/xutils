@@ -24,9 +24,9 @@ public class MsgTest implements Runnable {
 
 		System.setProperty("java.net.preferIPv4Stack", "true");
 		MsgTest msgtest = new MsgTest();
-		msgtest.rs = BrokerFactory.instance().create(RemoteService.class, 0);
+		msgtest.rs = BrokerFactory.instance().create(RemoteService.class);
 
-		ExceptionService es = BrokerFactory.instance().create(ExceptionService.class, 0);
+		ExceptionService es = BrokerFactory.instance().create(ExceptionService.class);
 		Logger remoteLogger = Logger.getLogger("remote");
 
 		// Thread t1=new Thread(msgtest);
@@ -45,13 +45,12 @@ public class MsgTest implements Runnable {
 		BrokerFactory.instance().setNotification(notify);
 		BrokerFactory.instance().addListener(notify);
 
-		List<Address> address = new ArrayList<Address>(BrokerFactory.instance().getMembers());
+		List<String> address = BrokerFactory.instance().getMembers();
 		logger.info("allmembers {}", address);
 		int length = address.size();
 
-		RemoteService remote = BrokerFactory.instance().create(RemoteService.class, 0);
-		GroupService as1 = BrokerFactory.instance().create(RemoteService.class.getName(), false, 1);
-		String methsign = Util.signature("ansyCall", Date.class,String.class);
+		RemoteService remote = BrokerFactory.instance().create(RemoteService.class);
+		
 		for (Server server : BrokerFactory.instance()) {
 			// remote =server.create(RemoteService.class,0);
 			logger.info("Server: {}", server);
@@ -67,10 +66,9 @@ public class MsgTest implements Runnable {
 			remoteLogger.debug("==============");
 			BrokerFactory.instance().sendToNode(address.get(i % length), "sendMessage", "" + i);
 			Date date = new Date();
-			as1.service(methsign, date, "MSGTEST:"+i);
 			try {
-				logger.info("anaycall : return {}", Arrays.toString(remote.ansyCall(date, "" + i)));
-				logger.info("call hello return: {}", remote.hello("sync ", i));
+				remote.ansyCall(date, "" + i);
+				remote.hello("sync ", i);
 				es.ansyException(i);
 			} catch (Throwable e) {
 				logger.info("hello number: {}", e, i);

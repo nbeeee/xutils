@@ -20,7 +20,7 @@ public class ExceptionServiceImpl implements ExceptionService {
 		logger.info("ansyCall, num: {}",i);
 	}
 
-	public int syncException(int i) throws RemoteException,SQLException {
+	public int syncException(int i) throws SQLException {
 		if(rand.nextInt(10)==0)
 			throw new SQLException("syncException from server: "+i);
 		logger.info("syncCall ,num: {}",i);

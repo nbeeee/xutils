@@ -15,40 +15,32 @@ public class HttpTest {
 
 	//@Test
 	public void testPerformanceA() {
-		RemoteService httpremote = HttpBrokerFactory.instance().create(RemoteService.class,0);
+		RemoteService httpremote = HttpBrokerFactory.instance().create(RemoteService.class);
 		// httpremote.ansyCall(new Date(), "http ansy");
 		logger.info("RemoteService begin");
 		for (int i = 0; i < 1000; i++) {
-			try {
-				httpremote.hello("http hello", i);
-			} catch (RemoteException e) {
-				throw new XutilRuntimeException(e);
-			}
+			httpremote.hello("http hello", i);
 		}
 		logger.info("RemoteService end");
 	}
 
 	//@Test
 	public void testPerformanceB() {
-		TestService httptest = HttpBrokerFactory.instance().create(TestService.class,0);
+		TestService httptest = HttpBrokerFactory.instance().create(TestService.class);
 		logger.info("TestService begin");
 		for (int i = 0; i < 1000; i++)
-			try {
 				httptest.call(i);
-			} catch (RemoteException e) {
-				throw new XutilRuntimeException(e);
-			}
 		logger.info("TestService end");
 	}
 
 	public static void main(String[] args) {
 		SimpleBroker hb = HttpBrokerFactory.instance();
-		RemoteService httpremote = hb.create(RemoteService.class,0);
-		TestService httptest = hb.create(TestService.class,0);
+		RemoteService httpremote = hb.create(RemoteService.class);
+		TestService httptest = hb.create(TestService.class);
 		for (int i = 0; i < 10; i++) {
 			try {
-				logger.info( "remote ansyCall return: {}",httpremote.ansyCall(new Date(), "http ansy"));
-				logger.info( "remote hello return: {}",httpremote.hello("http hello", i));
+				httpremote.ansyCall(new Date(), "http ansy");
+				httpremote.hello("http hello", i);
 				httptest.signal(1,true,20.00,9876543210L, 'x', new byte[]{1,2});
 
 				logger.info( "test call return: {}",httptest.call(i));
