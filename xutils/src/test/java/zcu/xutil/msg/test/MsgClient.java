@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.Date;
 
 import zcu.xutil.Logger;
+import zcu.xutil.msg.BrokerMgt;
 import zcu.xutil.msg.GroupService;
 import zcu.xutil.msg.impl.BrokerFactory;
 import zcu.xutil.utils.Util;
@@ -35,8 +36,12 @@ public class MsgClient implements Runnable{
 		ExceptionService es = BrokerFactory.instance().create(ExceptionService.class);
 		TestService ts =BrokerFactory.instance().create(TestService.class);
 
-		logger.info("members:{}",BrokerFactory.instance().getMembers());
-		logger.info("to String:{}",rs);
+		BrokerMgt mgt =  ((BrokerMgt)BrokerFactory.instance());
+		
+		logger.info("allmembers {}", mgt.getMembers());
+		logger.info("Servers {}", mgt.getServers());
+		logger.info("local info {}", mgt);
+
 
 		try {
 			Thread.sleep(1000);

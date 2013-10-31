@@ -18,9 +18,9 @@ public interface Constants {
 	public static final String XUTILS_WEB_ACTIONS_CACHE = "xutils.web.actions.cache";
 	public static final String XUTILS_WEB_BUNDLE_NAME = "xutils.web.bundle.name";
 
+	public static final String XUTILS_MSG_TEST = "xutils.msg.test";
 	public static final String XUTILS_MSG_CHANNEL_ID = "xutils.msg.channel.id";
 	public static final String XUTILS_MSG_SERVERSTAMP = "xutils.msg.serverstamp";
-	public static final String XUTILS_MSG_CLIENTSTAMP = "xutils.msg.clientstamp";
 	public static final String XUTILS_MSG_MAXPOOLSIZE = "xutils.msg.maxpoolsize";
 	public static final String XUTILS_MSG_CONFIG = "xutils.msg.config";
 	public static final String XUTILS_MSG_NODENAME = "xutils.msg.nodename";

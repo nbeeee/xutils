@@ -30,8 +30,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import zcu.xutil.Objutil;
-import zcu.xutil.msg.Broker;
-import zcu.xutil.msg.Server;
+
+import zcu.xutil.msg.BrokerMgt;
 import zcu.xutil.msg.impl.BrokerFactory;
 import zcu.xutil.msg.impl.Event;
 import zcu.xutil.msg.impl.UnavailableException;
@@ -39,7 +39,7 @@ import zcu.xutil.msg.impl.UnavailableException;
 public class ServiceServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private transient Map<String, String> permissions;
-	private transient Broker broker;
+	private transient BrokerMgt broker;
 
 	@Override
 	public void init(ServletConfig config) throws ServletException {
@@ -53,7 +53,7 @@ public class ServiceServlet extends HttpServlet {
 				permissions.put(s, s);
 			}
 		}
-		broker = BrokerFactory.instance();
+		broker =(BrokerMgt) BrokerFactory.instance();
 	}
 
 	@Override
@@ -63,18 +63,21 @@ public class ServiceServlet extends HttpServlet {
 		out.write("<html>\n<head>\n<title>节点和服务 </title>\n</head>\n<body>\n");
 		out.write("<h3>允许对外的HTTP服务 </h3>\n");
 		out.write(permissions == null ? "允许所有服务" : permissions.keySet().toString());
-		out.write("\n<h3>所有节点 </h3>\n");
+		out.write("\n<h3>正在访问节点 </h3><br>\n");
+		out.write(broker.toString());
+		out.write("\n<h3>所有节点 </h3><br>\n");
 		int i = 0;
-		for (Object member : broker.getMembers()) {
+		
+		for (String member : broker.getMembers()) {
 			if (i > 0) {
 				out.write(i % 8 == 0 ? "<br>" : "&nbsp;&nbsp;&nbsp;");
 				i++;
 			}
-			out.write(member.toString());
+			out.write(member);
 		}
 		out.write("\n<h3>所有服务器 </h3>\n");
-		for (Server s : broker)
-			out.append(s.toString()).append("<br>");
+		for (String s : broker.getServers())
+			out.append(s).append("<br>");
 		out.write("\n</body>\n</html>\n");
 	}
 

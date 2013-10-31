@@ -26,9 +26,7 @@ import java.lang.reflect.Proxy;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,39 +50,40 @@ import org.jgroups.blocks.RequestOptions;
 import org.jgroups.blocks.ResponseMode;
 import org.jgroups.util.UUID;
 
+import zcu.xutil.Constants;
 import zcu.xutil.Disposable;
 import zcu.xutil.DisposeManager;
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.XutilRuntimeException;
 import zcu.xutil.msg.Broker;
+import zcu.xutil.msg.BrokerMgt;
 import zcu.xutil.msg.GroupService;
 import zcu.xutil.msg.MsgListener;
 import zcu.xutil.msg.Notification;
-import zcu.xutil.msg.Server;
 import zcu.xutil.utils.ByteArray;
 import zcu.xutil.utils.Util;
 import zcu.xutil.utils.ProxyHandler;
 
 /**
- *
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
-final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, MessageListener, Disposable {
-	private static final StackTraceElement[] EMPTY_STACKS = {};
+final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler, MessageListener, Disposable {
+	private static final boolean testmode = Boolean.parseBoolean(Objutil.systring(Constants.XUTILS_MSG_TEST));
+	private static final StackTraceElement[] emptystacks = {};
 	static final AtomicLong lastUsed = new AtomicLong();
-	static final RequestOptions defalutOptions= new RequestOptions(ResponseMode.GET_ALL,30000);
+	static final RequestOptions defalutOptions = new RequestOptions(ResponseMode.GET_ALL, 30000);
 	static final Logger logger = Logger.getLogger(BrokerImpl.class);
 
-
-	private final CopyOnWriteArrayList<MsgListener> listeners = new CopyOnWriteArrayList<MsgListener>();
-	private final Channel channel;
 	private final Handler handler;
-	private final Address localAddr;
-	private final Membship membship;
 	private final int srvstamp;
-	private volatile Map<String, ServiceObject> serviceObjects = Collections.emptyMap();
+	private final Channel channel;
+	private final CopyOnWriteArrayList<MsgListener> listeners = new CopyOnWriteArrayList<MsgListener>();
+	volatile Map<String, ServiceObject> serviceObjects = Collections.emptyMap();
 	volatile boolean blocked, destroyed;
+	final Address localAddr;
+	final Membship membship;
 	final EventDao eventDao;
 	final MessageDispatcher dispatcher;
 	final ConcurrentMap<Address, Snode> serverMap = new ConcurrentHashMap<Address, Snode>(64);
@@ -106,6 +105,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		DisposeManager.register(this); // destory before EventDao.
 		eventDao.start();
 	}
+
 	@Override
 	public void destroy() {
 		if (destroyed)
@@ -135,7 +135,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 	}
 
 	@Override
-	public synchronized void startServer(Object ... services) {
+	public synchronized void startServer(Object... services) {
 		if (services.length == 0)
 			return;
 		Objutil.validate(!destroyed && serviceObjects.isEmpty(), "destroyed or strated.");
@@ -147,7 +147,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		}
 	}
 
-	void sendStartEvent(List<Address> dest) throws Exception  {
+	void sendStartEvent(List<Address> dest) throws Exception {
 		if (serviceObjects.isEmpty())
 			return;
 		StringBuilder sb = new StringBuilder(512);
@@ -174,6 +174,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			handler.newThread(task).start();
 		}
 	}
+
 	@Override
 	public void sendToAll(boolean includeSelf, String eventName, String eventValue, Object... params) {
 		Event event = new Event(eventName, eventValue, params);
@@ -187,10 +188,11 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			logger.info("{} send exception", e, eventName);
 		}
 	}
+
 	@Override
 	public void sendToNode(String nodeName, String eventName, String eventValue, Object... params) {
 		Address dest = UUIL.get(nodeName);
-		if(dest == null)
+		if (dest == null)
 			return;
 		Event event = new Event(eventName, eventValue, params);
 		if (!dest.equals(localAddr)) {
@@ -205,6 +207,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		} else if (!listeners.isEmpty())
 			mustExecute(new Listen(event, localAddr, listeners));
 	}
+
 	@Override
 	public void receive(Message msg) {
 		Event event = toEvent(msg);
@@ -222,10 +225,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		} else if (!listeners.isEmpty())
 			mustExecute(new Listen(event, addr, listeners));
 	}
-	@Override
-	public ServiceObject getLocalService(String name) {
-		return serviceObjects.get(name);
-	}
+
 
 	private byte[] proxyRemote(Event event, int timeoutMillis) {
 		final String name = event.getName();
@@ -234,7 +234,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		Iterator<Snode> iter = serverMap.values().iterator();
 		Snode s, target = null, candidate = null, susp = membship.suspected;
 		while (iter.hasNext()) {
-			if (!(s = iter.next()).services.containsKey(name))
+			if (!(s = iter.next()).contains(name))
 				continue;
 			if (s == susp)
 				candidate = s;
@@ -243,18 +243,24 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			else if (s.version == target.version) {
 				if (s.used < target.used)
 					target = s;
-			} else if (s.version < target.version)
+			} else if (testmode == s.version > target.version)
 				target = s;
 		}
 		if (target == null && (target = candidate) == null)
 			throw new UnavailableException("SERVICE NOT FOUND. ".concat(name));
 		return target.dispatch(msg, timeoutMillis);
 	}
+	
+	@Override
+	public ServiceObject getLocalService(String name) {
+		return serviceObjects.get(name);
+	}
+
 	@Override
 	public Object sendToRemote(Event event, int timeoutMillis) throws Throwable {
 		Object ret = Event.unmarshall(ByteArray.toStream(proxyRemote(event, timeoutMillis)));
-		if(ret instanceof Throwable)
-			throw (Throwable)ret;
+		if (ret instanceof Throwable)
+			throw (Throwable) ret;
 		return ret;
 	}
 
@@ -263,16 +269,38 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		String name = event.getName();
 		ServiceObject sobj = getLocalService(name);
 		try {
-			return  sobj == null ? proxyRemote(event,0) : Event.marshall(sobj.handle(event));
+			return sobj == null ? proxyRemote(event, 0) : Event.marshall(sobj.handle(event));
 		} catch (Throwable e) {
 			clearStack(e);
 			return Event.marshall(e);
 		}
 	}
 	@Override
-	public Iterator<Server> iterator() {
-		return Util.concat(isValid() ? Collections.singletonList(BrokerImpl.this).iterator() : null, serverMap.values()
-				.iterator());
+	public List<String> getServers() {
+		List<String> ret = new ArrayList<String>(serverMap.size() + 1);
+		if (!serviceObjects.isEmpty())
+			ret.add(BrokerImpl.this.toString());
+		for (Snode s : serverMap.values())
+			ret.add(s.toString());
+		return ret;
+	}
+
+	@Override
+	public List<String> getMembers() {
+		StringBuilder sb = new StringBuilder(32);
+		Map<?, ?> map = (Map) channel
+				.down(new org.jgroups.Event(org.jgroups.Event.GET_LOGICAL_PHYSICAL_MAPPINGS, null));
+		List<String> ret = new ArrayList<String>(map.size());
+		for (Address addr : membship.members) {
+			ret.add(sb.append(addr).append('=').append(map.get(addr)).toString());
+			sb.setLength(0);
+		}
+		return ret;
+	}
+
+	@Override
+	public String toString() {
+		return "address= " + localAddr + " , services=" + serviceObjects.keySet() + " version= " + srvstamp;
 	}
 	@Override
 	public Object handle(Message msg) {
@@ -287,61 +315,36 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			return Event.marshall(e);
 		}
 	}
+
 	@Override
 	public void getState(OutputStream out) throws Exception {
 		//
 	}
+
 	@Override
 	public void setState(InputStream in) throws Exception {
 		//
 	}
-	@Override
-	public Collection<String> getServiceNames() {
-		return Collections.unmodifiableCollection(serviceObjects.keySet());
-	}
-	@Override
-	public boolean isValid() {
-		return !serviceObjects.isEmpty();
-	}
-	@Override
-	public Object call(String name, String value, int timeoutMillis, Object... params) throws Throwable {
-		Event event = new Event(name, value, params);
-		event.syncall = true;
-		return Objutil.notNull(serviceObjects.get(name), "invalid service:{}", name).handle(event);
-	}
-	@Override
-	public String getAddress() {
-		return localAddr.toString();
-	}
-	
-	@Override
-	public List<String> getMembers() {
-		StringBuilder sb = new StringBuilder(32);
-		Map<?,?> map = (Map)channel.down(new org.jgroups.Event(org.jgroups.Event.GET_LOGICAL_PHYSICAL_MAPPINGS,null));
-		List<String> ret= new ArrayList<String>(map.size());
-		for(Map.Entry e : map.entrySet()){
-			ret.add(sb.append(e.getKey()).append('=') .append(e.getValue()).toString());
-			sb.setLength(0);
-		}
-		return ret;
-	}
-	
+
 	@Override
 	public void setNotification(Notification notify) {
 		membship.notification = notify;
 	}
+
 	@Override
 	public boolean addListener(MsgListener listener) {
 		return listeners.addIfAbsent(listener);
 	}
+
 	@Override
 	public boolean removeListener(MsgListener listener) {
 		return listeners.remove(listener);
 	}
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public <T> T create(Class<T> iface) {
-		GroupService gs = Objutil.notNull(iface.getAnnotation(GroupService.class), "not a groupservice",iface);
+		GroupService gs = Objutil.notNull(iface.getAnnotation(GroupService.class), "not a groupservice", iface);
 		final boolean syncmode = !gs.asyncall();
 		final boolean sendprefer = gs.sendprefer();
 		final int timeoutMillis = gs.timeoutMillis();
@@ -353,27 +356,27 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 				Object ret = ProxyHandler.proxyObjectMethod(proxy, m, args);
 				if (ret != null)
 					return ret;
-				Event event = new Event(cname, Util.signature(m.getName(),m.getParameterTypes()), args);
+				Event event = new Event(cname, Util.signature(m.getName(), m.getParameterTypes()), args);
 				ServiceObject sobj = getLocalService(cname);
 				if (destroyed)
 					throw new IllegalStateException("Broker destroyed.");
-				if(event.syncall = syncmode)
-					return sobj == null ? sendToRemote(event, timeoutMillis) :sobj.handle(event) ;
+				if (event.syncall = syncmode)
+					return sobj == null ? sendToRemote(event, timeoutMillis) : sobj.handle(event);
 				ret = Objutil.defaults(m.getReturnType());
 				if (expireMinutes > 0)
 					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
-				try{
-						if(sobj != null)
-							sobj.handle(event);
-						else if(sendprefer && !blocked)
-							sendToRemote(event, timeoutMillis);
-						 return ret;
-					}catch(IllegalMsgException e){
-						eventDao.discardLogger(event, e);
-						return ret;
-					}catch (Throwable e) {
-						logger.debug("prefer send fail. store event: {}", e, event);
-					}
+				try {
+					if (sobj != null)
+						sobj.handle(event);
+					else if (sendprefer && !blocked)
+						sendToRemote(event, timeoutMillis);
+					return ret;
+				} catch (IllegalMsgException e) {
+					eventDao.discardLogger(event, e);
+					return ret;
+				} catch (Throwable e) {
+					logger.debug("prefer send fail. store event: {}", e, event);
+				}
 				eventDao.store(event);
 				return ret;
 			}
@@ -401,21 +404,25 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 
 		Membship() {//
 		}
+
 		@Override
 		public void block() {
 			blocked = true;
 		}
+
 		@Override
 		public synchronized void unblock() {
 			blocked = false;
 			notifyAll();
 		}
+
 		@Override
 		public void suspect(Address addr) {
 			Snode s = serverMap.get(addr);
 			if (s != null)
 				suspected = s;
 		}
+
 		@Override
 		public void viewAccepted(View view) {
 			Address[] news = view.getMembers().toArray(new Address[view.size()]);
@@ -435,7 +442,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 				if (serverMap.remove(addr) != null)
 					logger.info("======>remove crashed server: {}", addr);
 			}
-			if (task.listen == null && !isValid())
+			if (task.listen == null && serviceObjects.isEmpty())
 				return;
 			task.lefts = task.size();
 			for (int i = 0; i < newlen; i++) {
@@ -455,6 +462,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		Notify(Notification n) {
 			listen = n;
 		}
+
 		@Override
 		public void run() {
 			int size = size();
@@ -472,8 +480,8 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		}
 	}
 
-	private final class Snode implements Server {
-		final Map<String, Object> services = new HashMap<String, Object>();
+	private final class Snode {
+		final String[] services;
 		final int version;
 		final Address addr;
 		volatile long used;
@@ -481,32 +489,20 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		Snode(Address address, int ver, List<String> list) {
 			this.version = ver;
 			this.addr = address;
-			for (int i = list.size() - 1; i >= 0; i--) {
-				String canonical = list.get(i).intern();
-				services.put(canonical, canonical);
+			int len = list.size();
+			this.services = new String[len];
+			while (--len >= 0)
+				services[len] = list.get(len).intern();
+		}
+
+		boolean contains(String name) {
+			String[] array;
+			int len = (array = services).length;
+			while (--len >= 0) {
+				if (array[len].equals(name))
+					return true;
 			}
-		}
-		@Override
-		public String getAddress() {
-			return addr.toString();
-		}
-		@Override
-		public Collection<String> getServiceNames() {
-			return Collections.unmodifiableCollection(services.keySet());
-		}
-		@Override
-		public boolean isValid() {
-			return this == serverMap.get(addr);
-		}
-		@Override
-		public Object call(String name, String value, int timeoutMillis, Object... params) throws Throwable {
-			Event event = new Event(name, value, params);
-			event.syncall = true;
-			Objutil.validate(isValid() && services.containsKey(name), "invalid service.{}", this);
-			Object ret = Event.unmarshall(ByteArray.toStream(dispatch(toMessage(event), timeoutMillis)));
-			if(ret instanceof Throwable)
-				throw (Throwable)ret;
-			return ret;
+			return false;
 		}
 
 		byte[] dispatch(Message msg, int timeout) {
@@ -514,7 +510,8 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			msg.setDest(addr);
 			Object o;
 			try {
-				o = dispatcher.sendMessage(msg, timeout > 0 ? new RequestOptions(ResponseMode.GET_ALL,timeout) : defalutOptions);
+				o = dispatcher.sendMessage(msg, timeout > 0 ? new RequestOptions(ResponseMode.GET_ALL, timeout)
+						: defalutOptions);
 			} catch (Exception e) {
 				throw new MSGException(addr + " " + e.toString());
 			}
@@ -525,13 +522,8 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 
 		@Override
 		public String toString() {
-			return getAddress().toString() + getServiceNames() + version;
+			return "address= " + addr + " , services=" + Arrays.toString(services) + " version= " + version;
 		}
-	}
-
-	@Override
-	public String toString() {
-		return getAddress().toString() + getServiceNames() + srvstamp;
 	}
 
 	private static final class Listen extends AbstractList<Object> implements Runnable, RandomAccess {
@@ -554,6 +546,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		public int size() {
 			return event.parameters().length;
 		}
+
 		@Override
 		public void run() {
 			for (MsgListener item : listeners) {
@@ -565,18 +558,17 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 			}
 		}
 	}
+
 	private static void clearStack(Throwable t) {
 		do
-			t.setStackTrace(EMPTY_STACKS);
+			t.setStackTrace(emptystacks);
 		while ((t = t.getCause()) != null);
 	}
 
 	static Event toEvent(Message msg) {
 		Event event = new Event();
 		try {
-			event
-					.readFrom(new DataInputStream(ByteArray.toStream(msg.getRawBuffer(), msg.getOffset(), msg
-							.getLength())));
+			event.readFrom(new DataInputStream(ByteArray.toStream(msg.getRawBuffer(), msg.getOffset(), msg.getLength())));
 		} catch (IOException e) {
 			throw new IllegalMsgException(e.toString());
 		}
@@ -592,9 +584,9 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		}
 		return new Message(null, null, baos.getRawBuffer(), 0, baos.size());
 	}
-	
+
 	private static class UUIL extends UUID {
-		static Address get(String nodeName){
+		static Address get(String nodeName) {
 			return cache.getByValue(nodeName);
 		}
 	}

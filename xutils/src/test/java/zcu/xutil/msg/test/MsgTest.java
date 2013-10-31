@@ -10,19 +10,24 @@ import java.util.List;
 
 import org.jgroups.Address;
 
+import zcu.xutil.Constants;
 import zcu.xutil.Logger;
+import zcu.xutil.Objutil;
 import zcu.xutil.msg.GroupService;
-import zcu.xutil.msg.Server;
+import zcu.xutil.msg.BrokerMgt;
 import zcu.xutil.msg.impl.BrokerFactory;
 import zcu.xutil.utils.Util;
 
 public class MsgTest implements Runnable {
+	static{
+	System.setProperty("java.net.preferIPv4Stack", "true");
+	}
 	static Logger logger = Logger.getLogger(MsgTest.class);
 	RemoteService rs;
 
 	public static void main(String[] args) {
 
-		System.setProperty("java.net.preferIPv4Stack", "true");
+		
 		MsgTest msgtest = new MsgTest();
 		msgtest.rs = BrokerFactory.instance().create(RemoteService.class);
 
@@ -44,18 +49,14 @@ public class MsgTest implements Runnable {
 		Notify notify = new Notify();
 		BrokerFactory.instance().setNotification(notify);
 		BrokerFactory.instance().addListener(notify);
-
-		List<String> address = BrokerFactory.instance().getMembers();
-		logger.info("allmembers {}", address);
-		int length = address.size();
+		BrokerMgt mgt =  ((BrokerMgt)BrokerFactory.instance());
+		
+		logger.info("allmembers {}", mgt.getMembers());
+		logger.info("Servers {}", mgt.getServers());
+		logger.info("local info {}", mgt);
 
 		RemoteService remote = BrokerFactory.instance().create(RemoteService.class);
 		
-		for (Server server : BrokerFactory.instance()) {
-			// remote =server.create(RemoteService.class,0);
-			logger.info("Server: {}", server);
-		}
-
 		for (int i = 0; i < 10; i++) {
 			// try {
 			// logger.info("server return: {}",es.syncException(i));
@@ -64,7 +65,7 @@ public class MsgTest implements Runnable {
 			// }
 
 			remoteLogger.debug("==============");
-			BrokerFactory.instance().sendToNode(address.get(i % length), "sendMessage", "" + i);
+			BrokerFactory.instance().sendToNode(Objutil.systring(Constants.XUTILS_LOCALHOST), "sendMessage", "" + i);
 			Date date = new Date();
 			try {
 				remote.ansyCall(date, "" + i);

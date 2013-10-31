@@ -15,10 +15,6 @@
  */
 package zcu.xutil.msg;
 
-import java.util.List;
-
-import zcu.xutil.msg.impl.Event;
-
 /**
  * Message Broker. 高可用的消息服务.同时支持集群服务模式和节点服务模式.<br>
  * 集群服务模式: 通过 startServer 方法 部署服务,客户端通过 create方法
@@ -65,7 +61,7 @@ import zcu.xutil.msg.impl.Event;
  *
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
-public interface Broker extends SimpleBroker, Iterable<Server> {
+public interface Broker extends SimpleBroker {
 	/**
 	 * 部署服务.
 	 *
@@ -133,22 +129,4 @@ public interface Broker extends SimpleBroker, Iterable<Server> {
 	 */
 	void setNotification(Notification notify);
 
-	/**
-	 * 取得最新的成员地址表
-	 *
-	 * @return the members
-	 */
-	List<String> getMembers();
-
-	/**
-	 * 取得本地地址
-	 *
-	 */
-	String getAddress();
-
-
-	/**
-	 * 作为 http 和 jgroups 之间的代理。
-	 **/
-	byte[] proxy(Event event);
 }
