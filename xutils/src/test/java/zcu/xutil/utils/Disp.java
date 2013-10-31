@@ -21,9 +21,6 @@ import zcu.xutil.web.Webutil;
 public class Disp extends AbstractDispose {
 	private final static Logger logger = Logger.getLogger(Disp.class);
 	String name;
-	public static int disposeSize() {
-		return DisposeManager.size();
-	}
 	public Disp() {
 		name = "Disp";
 	}
