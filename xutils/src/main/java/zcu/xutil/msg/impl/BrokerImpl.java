@@ -116,7 +116,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 				Event event = new Event();
 				event.syncall = true;
 				Message msg = toMessage(event);
-				msg.setFlag(Message.OOB);
+				msg.setFlag(Message.Flag.OOB);
 				blockWait();
 				channel.send(msg);
 			} catch (Throwable e) {
@@ -156,7 +156,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 		Event event = new Event(Integer.toString(srvstamp), sb.substring(1), (Object[]) null);
 		event.syncall = true;
 		Message msg = toMessage(event);
-		msg.setFlag(Message.OOB);
+		msg.setFlag(Message.Flag.OOB);
 		blockWait();
 		if (dest != null)
 			for (int i = dest.size() - 1; i >= 0 && !destroyed; i--) {

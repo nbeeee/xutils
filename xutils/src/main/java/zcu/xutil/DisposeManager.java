@@ -24,15 +24,13 @@ import java.util.WeakHashMap;
 import java.util.Map.Entry;
 
 /**
- *
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a> *
  */
 public final class DisposeManager implements Runnable, Comparator<Entry> {
-	private static final Map<Object, DisposeManager> disposes = Collections
-			.synchronizedMap(new WeakHashMap<Object, DisposeManager>());
-	private static volatile int counter;
 	private static volatile Runnable terminator;
 	private static volatile Thread shutdownHook;
+
 	static {
 		Runtime.getRuntime().addShutdownHook(shutdownHook = new Thread(new DisposeManager(), "shutdown"));
 		try {
@@ -43,9 +41,11 @@ public final class DisposeManager implements Runnable, Comparator<Entry> {
 		}
 	}
 
+	@SuppressWarnings("restriction")
 	private static void install(final String signal) {
 		new sun.misc.SignalHandler() {
 			private final sun.misc.SignalHandler old = sun.misc.Signal.handle(new sun.misc.Signal(signal), this);
+
 			@Override
 			public void handle(sun.misc.Signal sig) {
 				runTerminator();
@@ -55,8 +55,8 @@ public final class DisposeManager implements Runnable, Comparator<Entry> {
 		};
 	}
 
-	public static void setTerminateHandler(Runnable singalHandler) {
-		terminator = singalHandler;
+	public static void setTerminateHandler(Runnable r) {
+		terminator = r;
 	}
 
 	static void runTerminator() {
@@ -81,55 +81,35 @@ public final class DisposeManager implements Runnable, Comparator<Entry> {
 	}
 
 	public static void register(Disposable target) {
-		register(target, "destroy", counter++);
-
+		register(target, "destroy");
 	}
 
 	public static void register(Object target, String destroyMethod) {
-		register(target, destroyMethod, counter++);
+		new Item(target, destroyMethod);
 	}
 
-	/**
-	 * execute at shutdown if target not GC.
-	 *
-	 *
-	 */
 	public static void register(Object target, String destroyMethod, int order) {
-		disposes.put(target, new DisposeManager(destroyMethod, order));
+		new Item(target, destroyMethod, order);
 	}
 
-	public static int size() {
-		return disposes.size();
-	}
-
-	private final String method;
-	private final int order;
-
-	public DisposeManager() {
-		this(null, 0);
-	}
-
-	private DisposeManager(String s, int i) {
-		method = s;
-		order = i;
-	}
 	@Override
 	public void run() {
 		runTerminator();
-		Entry[] entrys = disposes.entrySet().toArray(new Entry[0]);
+		Entry[] entrys = Item.disposes.entrySet().toArray(new Entry[0]);
 		Arrays.sort(entrys, this);
 		for (int i = entrys.length - 1; i >= 0; i--) {
 			Object o = entrys[i].getKey();
-			if (disposes.remove(o) == null)
+			if (Item.disposes.remove(o) == null)
 				continue;
-			DisposeManager dm = ((DisposeManager) entrys[i].getValue());
-			Objutil.log(DisposeManager.class, "{} destroyed in order: {}", null, o, dm.order);
-			destroyCall(o, dm.method);
+			Item item = ((Item) entrys[i].getValue());
+			Objutil.log(DisposeManager.class, "{} destroyed in order: {}", null, o, item.order);
+			destroyCall(o, item.method);
 		}
 	}
+
 	@Override
 	public int compare(Entry o1, Entry o2) {
-		int l = ((DisposeManager) o1.getValue()).order, r = ((DisposeManager) o2.getValue()).order;
+		int l = ((Item) o1.getValue()).order, r = ((Item) o2.getValue()).order;
 		return l > r ? 1 : (l < r ? -1 : 0);
 	}
 
@@ -140,6 +120,23 @@ public final class DisposeManager implements Runnable, Comparator<Entry> {
 			m.invoke(o, (Object[]) null);
 		} catch (Throwable e) {
 			Objutil.log(DisposeManager.class, "destroy exception.", e);
+		}
+	}
+
+	private static class Item {
+		private static volatile int counter;
+		static final Map<Object, Item> disposes = Collections.synchronizedMap(new WeakHashMap<Object, Item>());
+		final String method;
+		final int order;
+
+		Item(Object o, String s) {
+			this(o, s, counter++);
+		}
+
+		Item(Object o, String s, int i) {
+			method = s;
+			order = i;
+			disposes.put(o, this);
 		}
 	}
 }

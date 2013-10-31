@@ -38,7 +38,6 @@ import zcu.xutil.XutilRuntimeException;
 
 public final class Util implements Iterator {
 	public static final String filencode = Objutil.systring("file.encoding", "GBK");
-	private static final TGP xutilsGroup = new TGP();
 	private static Map<String, Format> formatCache;
 
 	public static String format(String pattern, Object dateOrNumber) {
@@ -59,7 +58,7 @@ public final class Util implements Iterator {
 
 	@SuppressWarnings("unchecked")
 	public static <T extends Annotation> T defaultAnnotation(Class<T> annotationType) {
-		return (T) Proxy.newProxyInstance(annotationType.getClassLoader(), new Class[] { annotationType }, xutilsGroup);
+		return (T) Proxy.newProxyInstance(annotationType.getClassLoader(), new Class[] { annotationType }, DAH.instance);
 	}
 
 	public static Class getSetterType(Method m) {
@@ -288,11 +287,11 @@ public final class Util implements Iterator {
 	}
 
 	public static ThreadGroup getThreadGroup() {
-		return xutilsGroup;
+		return TGP.instance;
 	}
 
 	public static Thread newThread(Runnable target, String name, boolean daemon) {
-		Thread t = new Thread(xutilsGroup, target, name);
+		Thread t = new Thread(TGP.instance, target, name);
 		if (t.isDaemon() != daemon)
 			t.setDaemon(daemon);
 		if (t.getPriority() != Thread.NORM_PRIORITY)
@@ -325,8 +324,9 @@ public final class Util implements Iterator {
 		return Timer.currentMillis;
 	}
 
-	private static class TGP extends ThreadGroup implements InvocationHandler {
-		TGP() {
+	private static class TGP extends ThreadGroup {
+		static final ThreadGroup instance = new TGP();
+		private TGP() {
 			super("xutils");
 		}
 
@@ -335,7 +335,10 @@ public final class Util implements Iterator {
 			Logger.LOG.error("uncaught exception in {} (thread group={} )", e, t.getName(), this);
 			super.uncaughtException(t, e);
 		}
-
+	}
+	
+	private static final class DAH implements InvocationHandler{
+		static final InvocationHandler instance = new DAH();
 		@Override
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			Object ret = ProxyHandler.proxyObjectMethod(proxy, method, args);
