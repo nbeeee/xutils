@@ -11,6 +11,9 @@ import zcu.xutil.utils.Util;
 
 
 public class MsgClient implements Runnable{
+	static{
+	System.setProperty("java.net.preferIPv4Stack", "true");
+	}
 	static Logger logger = Logger.getLogger(MsgClient.class);
 	RemoteService rs;
 	ExceptionService es ;
@@ -22,7 +25,7 @@ public class MsgClient implements Runnable{
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		System.setProperty("java.net.preferIPv4Stack", "true");
+		
 		try {
 			Thread.sleep(1000);
 		} catch (InterruptedException e1) {
