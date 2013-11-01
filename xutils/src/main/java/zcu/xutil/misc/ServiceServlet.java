@@ -58,6 +58,7 @@ public class ServiceServlet extends HttpServlet {
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
 		resp.setContentType("text/html; charset=UTF-8");
 		PrintWriter out = resp.getWriter();
 		out.write("<html>\n<head>\n<title>节点和服务 </title>\n</head>\n<body>\n");
@@ -83,6 +84,7 @@ public class ServiceServlet extends HttpServlet {
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		boolean test = req.getParameter("Xtest")!=null;
 		Event event = new Event();
 		event.readFrom(new DataInputStream(req.getInputStream()));
 		OutputStream out = resp.getOutputStream();
@@ -94,6 +96,6 @@ public class ServiceServlet extends HttpServlet {
 			}
 			event.setName(s);
 		}
-		out.write(broker.proxy(event));
+		out.write(broker.proxy(event,test));
 	}
 }

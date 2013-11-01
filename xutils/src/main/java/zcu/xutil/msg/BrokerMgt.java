@@ -12,5 +12,5 @@ public interface BrokerMgt {
 	/**
 	 * 作为 http 和 jgroups 之间的代理。
 	 **/
-	byte[] proxy(Event event);
+	byte[] proxy(Event event,boolean test);
 }
