@@ -26,6 +26,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
+import zcu.xutil.Constants;
 import zcu.xutil.Disposable;
 import zcu.xutil.DisposeManager;
 import zcu.xutil.Logger;
@@ -40,6 +41,7 @@ import zcu.xutil.utils.Util;
 import zcu.xutil.utils.ProxyHandler;
 
 final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
+	private static final boolean testmode = Boolean.parseBoolean(Objutil.systring(Constants.XUTILS_MSG_TEST));
 	static final Logger logger = Logger.getLogger(HttpBrokerImpl.class);
 	private final URL[] urls;
 	private final String credentials;
@@ -80,6 +82,8 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 				// "application/octet-stream");
 				if (credentials != null)
 					conn.setRequestProperty("Authorization", credentials);
+				if(testmode)
+					conn.setRequestProperty("Xtest", "T");
 				conn.setReadTimeout(timeout > 0 ? timeout : 30000);
 				conn.connect();
 				return conn;

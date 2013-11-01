@@ -227,7 +227,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 	}
 
 
-	private byte[] proxyRemote(Event event, int timeoutMillis) {
+	private byte[] proxyRemote(Event event, int timeoutMillis,boolean test) {
 		final String name = event.getName();
 		Message msg = toMessage(event);
 		blockWait();
@@ -243,7 +243,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 			else if (s.version == target.version) {
 				if (s.used < target.used)
 					target = s;
-			} else if (testmode == s.version > target.version)
+			} else if (test == s.version > target.version)
 				target = s;
 		}
 		if (target == null && (target = candidate) == null)
@@ -258,18 +258,18 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 
 	@Override
 	public Object sendToRemote(Event event, int timeoutMillis) throws Throwable {
-		Object ret = Event.unmarshall(ByteArray.toStream(proxyRemote(event, timeoutMillis)));
+		Object ret = Event.unmarshall(ByteArray.toStream(proxyRemote(event, timeoutMillis,testmode)));
 		if (ret instanceof Throwable)
 			throw (Throwable) ret;
 		return ret;
 	}
 
 	@Override
-	public byte[] proxy(Event event) {
+	public byte[] proxy(Event event,boolean test) {
 		String name = event.getName();
 		ServiceObject sobj = getLocalService(name);
 		try {
-			return sobj == null ? proxyRemote(event, 0) : Event.marshall(sobj.handle(event));
+			return sobj == null ? proxyRemote(event, 0,test) : Event.marshall(sobj.handle(event));
 		} catch (Throwable e) {
 			clearStack(e);
 			return Event.marshall(e);
