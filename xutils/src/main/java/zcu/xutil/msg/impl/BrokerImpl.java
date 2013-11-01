@@ -27,7 +27,6 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
@@ -80,13 +79,14 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 	private final int srvstamp;
 	private final Channel channel;
 	private final CopyOnWriteArrayList<MsgListener> listeners = new CopyOnWriteArrayList<MsgListener>();
+	private final ConcurrentMap<String, List<Address>> nameToServers = new ConcurrentHashMap<String, List<Address>>(128);
 	volatile Map<String, ServiceObject> serviceObjects = Collections.emptyMap();
 	volatile boolean blocked, destroyed;
 	final Address localAddr;
 	final Membship membship;
 	final EventDao eventDao;
 	final MessageDispatcher dispatcher;
-	final ConcurrentMap<Address, Snode> serverMap = new ConcurrentHashMap<Address, Snode>(64);
+	final ConcurrentMap<Address, Snode> serverMap = new ConcurrentHashMap<Address, Snode>(32);
 
 	BrokerImpl(BrokerFactory factory) {
 		this.srvstamp = factory.serverStamp;
@@ -218,63 +218,89 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 				if (serverMap.remove(addr) != null)
 					logger.info("======>remove lefted server: {}", addr);
 			} else {
-				Snode s = new Snode(addr, Integer.parseInt(name), Objutil.split(event.getValue(), '\t'));
-				if (serverMap.putIfAbsent(addr, s) == null)
-					logger.debug("======>add server: {}", s);
+				List<String> serviceslist = Objutil.split(event.getValue(), '\t');
+				int len = serviceslist.size();
+				String[] services = new String[len];
+				while (--len >= 0)
+					services[len] = serviceslist.get(len).intern();
+				Snode node = new Snode(addr, Integer.parseInt(name), services);
+				if (serverMap.putIfAbsent(addr, node) == null) {
+					len = services.length;
+					while (--len >= 0) {
+						List<Address> list = nameToServers.get(services[len]);
+						if (list == null) {
+							(list = new ArrayList<Address>()).add(node.addr);
+							if ((list = nameToServers.putIfAbsent(services[len], list)) == null)
+								continue;
+						}
+						synchronized (list) {
+							list.add(node.addr);
+						}
+					}
+					logger.debug("======>add server: {}", node);
+				}
 			}
 		} else if (!listeners.isEmpty())
 			mustExecute(new Listen(event, addr, listeners));
 	}
 
-
-	private byte[] proxyRemote(Event event, int timeoutMillis,boolean test) {
-		final String name = event.getName();
-		Message msg = toMessage(event);
+	private Snode select(String name, boolean test) {
 		blockWait();
-		Iterator<Snode> iter = serverMap.values().iterator();
-		Snode s, target = null, candidate = null, susp = membship.suspected;
-		while (iter.hasNext()) {
-			if (!(s = iter.next()).contains(name))
-				continue;
-			if (s == susp)
-				candidate = s;
-			else if (target == null)
-				target = s;
-			else if (s.version == target.version) {
-				if (s.used < target.used)
-					target = s;
-			} else if (test == s.version > target.version)
-				target = s;
+		List<Address> list = nameToServers.get(name);
+		if (list != null) {
+			Snode s, target = null, candidate = null, susp = membship.suspected;
+			synchronized (list) {
+				int len = list.size();
+				while (--len >= 0) {
+					if ((s = serverMap.get(list.get(len))) == null)
+						list.remove(len);
+					else if (s == susp)
+						candidate = s;
+					else if (target == null)
+						target = s;
+					else if (s.version == target.version) {
+						if (s.used < target.used)
+							target = s;
+					} else if (test == s.version > target.version)
+						target = s;
+				}
+			}
+			if (target != null || (target = candidate) != null)
+				return target;
 		}
-		if (target == null && (target = candidate) == null)
-			throw new UnavailableException("SERVICE NOT FOUND. ".concat(name));
-		return target.dispatch(msg, timeoutMillis);
+		throw new UnavailableException("SERVICE NOT FOUND. ".concat(name));
 	}
-	
+
 	@Override
 	public ServiceObject getLocalService(String name) {
 		return serviceObjects.get(name);
 	}
 
 	@Override
-	public Object sendToRemote(Event event, int timeoutMillis) throws Throwable {
-		Object ret = Event.unmarshall(ByteArray.toStream(proxyRemote(event, timeoutMillis,testmode)));
+	public Object sendToRemote(Event event, int millis) throws Throwable {
+		Message msg = toMessage(event);
+		RequestOptions options = millis > 0 ? new RequestOptions(ResponseMode.GET_ALL, millis): defalutOptions;
+		Object ret = Event.unmarshall(ByteArray.toStream(select(event.getName(), testmode).dispatch(msg, options)));
 		if (ret instanceof Throwable)
 			throw (Throwable) ret;
 		return ret;
 	}
 
 	@Override
-	public byte[] proxy(Event event,boolean test) {
+	public byte[] proxy(Event event, boolean test) {
 		String name = event.getName();
 		ServiceObject sobj = getLocalService(name);
 		try {
-			return sobj == null ? proxyRemote(event, 0,test) : Event.marshall(sobj.handle(event));
+			if (sobj != null)
+				return Event.marshall(sobj.handle(event));
+			Message msg = toMessage(event);
+			return select(name, test).dispatch(msg, defalutOptions);
 		} catch (Throwable e) {
 			clearStack(e);
 			return Event.marshall(e);
 		}
 	}
+
 	@Override
 	public List<String> getServers() {
 		List<String> ret = new ArrayList<String>(serverMap.size() + 1);
@@ -302,6 +328,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 	public String toString() {
 		return "address= " + localAddr + " , services=" + serviceObjects.keySet() + " version= " + srvstamp;
 	}
+
 	@Override
 	public Object handle(Message msg) {
 		Event event = toEvent(msg);
@@ -396,7 +423,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 				}
 		}
 	}
-
+	
 	private final class Membship implements MembershipListener {
 		volatile Snode suspected;
 		volatile List<Address> members;
@@ -486,32 +513,18 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 		final Address addr;
 		volatile long used;
 
-		Snode(Address address, int ver, List<String> list) {
+		Snode(Address address, int ver, String[] array) {
 			this.version = ver;
 			this.addr = address;
-			int len = list.size();
-			this.services = new String[len];
-			while (--len >= 0)
-				services[len] = list.get(len).intern();
+			this.services = array;
 		}
 
-		boolean contains(String name) {
-			String[] array;
-			int len = (array = services).length;
-			while (--len >= 0) {
-				if (array[len].equals(name))
-					return true;
-			}
-			return false;
-		}
-
-		byte[] dispatch(Message msg, int timeout) {
+		byte[] dispatch(Message msg, RequestOptions options) {
 			used = lastUsed.getAndIncrement();
 			msg.setDest(addr);
 			Object o;
 			try {
-				o = dispatcher.sendMessage(msg, timeout > 0 ? new RequestOptions(ResponseMode.GET_ALL, timeout)
-						: defalutOptions);
+				o = dispatcher.sendMessage(msg, options);
 			} catch (Exception e) {
 				throw new MSGException(addr + " " + e.toString());
 			}

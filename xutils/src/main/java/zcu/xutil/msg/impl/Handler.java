@@ -100,7 +100,7 @@ public final class Handler implements ThreadFactory {
 							invoke(event);
 						} catch (RuntimeException e) {
 							eventDao.store(event);
-							logger.warn("{} unavailable.", e, event.getName());
+							logger.warn("call {} fail. store it for later call.", e, event.getName());
 						} catch (Throwable e) {
 							eventDao.discardLogger(event, e);
 						} 
