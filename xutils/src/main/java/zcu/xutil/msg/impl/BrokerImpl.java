@@ -337,7 +337,9 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 			throw new UnavailableException(event.getName());
 		try {
 			return Event.marshall(sobj.handle(event));
-		} catch (Throwable e) {
+		} catch (MSGException e) {
+			throw e;
+		}catch (Throwable e) {
 			clearStack(e);
 			return Event.marshall(e);
 		}
@@ -530,7 +532,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 			}
 			if (o instanceof byte[])
 				return (byte[]) o;
-			throw new MSGException("unexpected retval:" + o);
+			throw (o instanceof MSGException) ? (MSGException)o : new MSGException("unexpected retval:" + o);
 		}
 
 		@Override

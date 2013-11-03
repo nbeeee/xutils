@@ -251,7 +251,7 @@ public final class Event implements Externalizable {
 							}
 						}
 					}
-				} catch (IOException e) {
+				} catch (Exception e) {
 					throw new IllegalMsgException(e.toString());
 				} finally {
 					Objutil.closeQuietly(oos);
@@ -294,9 +294,7 @@ public final class Event implements Externalizable {
 					list.add(primitiveRead(b, dis));
 				}
 			}
-		} catch (IOException e) {
-			throw new IllegalMsgException(e.toString());
-		} catch (ClassNotFoundException e) {
+		} catch (Exception e) {
 			throw new IllegalMsgException(e.toString());
 		} finally {
 			Objutil.closeQuietly(ois);
