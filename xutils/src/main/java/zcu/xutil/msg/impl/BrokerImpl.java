@@ -395,11 +395,14 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 				if (expireMinutes > 0)
 					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
 				try {
-					if (sobj != null)
+					if (sobj != null){
 						sobj.handle(event);
-					else if (sendprefer && !blocked)
+						return ret;
+					}
+					if (sendprefer && !blocked){
 						sendToRemote(event, timeoutMillis);
-					return ret;
+						return ret;
+					}
 				} catch (IllegalMsgException e) {
 					eventDao.discardLogger(event, e);
 					return ret;

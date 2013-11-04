@@ -177,9 +177,10 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 				if (expireMinutes > 0)
 					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
 				try {
-					if (sendprefer && available)
+					if (sendprefer && available){
 						sendToRemote(event, timeoutMillis);
-					return ret;
+						return ret;
+					}
 				} catch (IllegalMsgException e) {
 					eventDao.discardLogger(event, e);
 					return ret;
