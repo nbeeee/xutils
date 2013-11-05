@@ -46,7 +46,7 @@ public class RootCfg implements Config{
 			Binder binder;
 			  public void config(Binder b) throws Exception {
 				b.setEnv("env.test", "myttttt");
-				CFG.typ(Store.class,"ssssss",CFG.arr(Book.class,new Book("bkn",11.1,4))).call("start").put(b,"store",null);
+				CFG.typ(Store.class,"ssssss",CFG.arr(Book.class,new Book("bkn",11.1,4))).call("start").put(b,"store",null,"");
 	
 			  }
 		  });

@@ -46,9 +46,9 @@ public final class XMLHandler extends DefaultHandler {
 		xmlurl = url;
 	}
 
-	String getBuffer(boolean nullable) {
+	String getBuffer() {
 		String s = buffer.toString();
-		return nullable && s.equals("${}") ? null : Objutil.placeholder(s, binder);
+		return s.trim().equals("${}") ? null : Objutil.placeholder(s, binder);
 	}
 
 	Class<?> clsOf(String s) {
@@ -82,11 +82,11 @@ public final class XMLHandler extends DefaultHandler {
 	public void endElement(final String uri, final String local, final String qName) throws SAXException {
 		try {
 			if ("import".equals(local)) {
-				String s = getBuffer(false);
-				if (varkey != null)
-					binder.setPlaceholder(varkey, s);
-				else
+				String s = getBuffer();
+				if (varkey == null)
 					binder.batch(s, xmlurl);
+				else 
+					binder.setPlaceholder(varkey, s);
 			} else if (current != null && current.endElement(local))
 				current = current.previous;
 		} catch (RuntimeException e) {
@@ -140,7 +140,7 @@ public final class XMLHandler extends DefaultHandler {
 	@SuppressWarnings("serial")
 	private final class Entry extends ArrayList<Call> {
 		private boolean cache, eager, alias, array;
-		private String id, destroy, output, intercepts[];
+		private String id, destroy, output, intercepts;
 		private Class type, aoptype;
 		Entry previous;
 
@@ -181,9 +181,9 @@ public final class XMLHandler extends DefaultHandler {
 				return true;
 			}
 			if ("set".equals(local) || "arg".equals(local))
-				get(size() - 1).tail.val = getBuffer(true);
+				get(size() - 1).tail.val = getBuffer();
 			else if ("aop".equals(local))
-				intercepts = Objutil.split(getBuffer(false).trim(), ',').toArray(new String[] {});
+				intercepts = Objutil.ifNull(getBuffer(), "") ;
 			return false;
 		}
 

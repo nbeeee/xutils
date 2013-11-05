@@ -105,7 +105,7 @@ public class ProxyTest {
 		Logger.LOG.info("testContextInherit begin");
 		Context ctx1=CFG.build(null ,new Config(){
 			public void config(Binder b) throws Exception {
-				typ(Empty.class).uni(b,"testService",null,"InterceptAll","txIntercept");
+				typ(Empty.class).uni(b,"testService",null,"InterceptAll,txIntercept");
 				val(new InterceptAll()).uni(b,"InterceptAll");
 				val(new TxInterceptor()).uni(b,"txIntercept");
 			}

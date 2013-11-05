@@ -64,8 +64,10 @@ public final class DefaultBinder implements Binder, Replace {
 	}
 
 	@Override
-	public LifeCtrl put(boolean cache, String name, Provider provider, Class<?> iface, String[] aops) {
-		return put(cache, name, aops == null && iface == null ? provider : new ProxyDecorator(iface, provider, aops));
+	public LifeCtrl put(boolean cache, String name, Provider provider, Class<?> iface, String interceptors) {
+		if(interceptors != null || iface != null)
+			provider =  new ProxyDecorator(iface, provider, interceptors);
+		return put(cache, name, provider);
 	}
 
 	public void batch(String configs, URL ctx) {
@@ -142,9 +144,11 @@ public final class DefaultBinder implements Binder, Replace {
 
 	@Override
 	public void setEnv(String name, Object value) {
-		if (environ == null)
-			environ = new HashMap<String, Object>();
-		validate(environ.put(name, value) == null, "duplicated name: {}", name);
+		if (value != null) {
+			if (environ == null)
+				environ = new HashMap<String, Object>();
+			validate(environ.put(name, value) == null, "duplicated name: {}", name);
+		}
 	}
 
 	@Override
@@ -158,9 +162,11 @@ public final class DefaultBinder implements Binder, Replace {
 	}
 
 	void setPlaceholder(String name, String value) {
-		if (placeholder == null)
-			placeholder = new HashMap<String, String>();
-		validate(placeholder.put(name, value) == null, "duplicated name: {}", name);
+		if (value != null) {
+			if (placeholder == null)
+				placeholder = new HashMap<String, String>();
+			validate(placeholder.put(name, value) == null, "duplicated name: {}", name);
+		}
 	}
 
 	@Override

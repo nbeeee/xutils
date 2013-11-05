@@ -148,7 +148,7 @@ public class ConfigTest {
 		Context ctx=CFG.build(null ,new Config(){
 			public void config(Binder b) throws Exception {
 				typ(Store.class).call("no","start").call("echo", "echoStart").uni(b,"store",null,"txIntercept");
-				typ(Empty.class).uni(b,"testService",null,"txIntercept","InterceptAll:");
+				typ(Empty.class).uni(b,"testService",null,"txIntercept,InterceptAll:");
 				val(new TxInterceptor()).uni(b,"txIntercept");
 				val(new InterceptAll()).uni(b,"InterceptAll:");
 			}
@@ -374,7 +374,7 @@ public class ConfigTest {
 			ctx= CFG.build(null ,new Config(){
 				public void config(Binder b) throws Exception {
 					typ(Store.class).call("no", "call no").call("echo", "call ech0").uni(b,"store",null,"txIntercept");
-					typ(Empty.class).uni(b,"testService",null,"txIntercept","InterceptAll:");
+					typ(Empty.class).uni(b,"testService",null,"txIntercept,InterceptAll:");
 					val(new TxInterceptor()).uni(b,"txIntercept");
 					val(new InterceptAll()).uni(b,"InterceptAll:");
 				}

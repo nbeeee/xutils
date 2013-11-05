@@ -23,12 +23,12 @@ import zcu.xutil.utils.Function;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public abstract class BeanReference {
-	public final LifeCtrl put(Binder binder,String name, Class proxyIface, String... interceptors) {
+	public final LifeCtrl put(Binder binder,String name, Class proxyIface, String interceptors) {
 		return binder.put(false, name, get(), proxyIface, interceptors);
 	}
 
 	public final LifeCtrl put(Binder binder,String name) {
-		return put(binder,name, null, (String[]) null);
+		return put(binder,name, null, null);
 	}
 
 	/**
@@ -36,12 +36,12 @@ public abstract class BeanReference {
 	 * 
 	 * @see Binder#put(boolean, String, Provider, Class, String[])
 	 */
-	public final LifeCtrl uni(Binder binder,String name, Class proxyIface, String... interceptors) {
+	public final LifeCtrl uni(Binder binder,String name, Class proxyIface, String interceptors) {
 		return binder.put(true, name, get(), proxyIface, interceptors);
 	}
 
 	public final LifeCtrl uni(Binder binder,String name) {
-		return uni(binder,name, null, (String[]) null);
+		return uni(binder,name, null,  null);
 	}
 
 	

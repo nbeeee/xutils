@@ -17,7 +17,9 @@ package zcu.xutil.cfg;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.List;
 
+import zcu.xutil.Objutil;
 import zcu.xutil.utils.Interceptor;
 import zcu.xutil.utils.Util;
 import zcu.xutil.utils.ProxyHandler;
@@ -25,12 +27,12 @@ import zcu.xutil.utils.ProxyHandler;
 public final class ProxyDecorator implements Decorator {
 	private final Provider base;
 	private final Constructor constructor;
-	private Interceptor[] interceptors;
-	private String[] names;
+	private Interceptor[] intercepts;
+	private String names;
 
-	public ProxyDecorator(Class proxyInterface, Provider delegate, String[] interceptorNames) {
+	public ProxyDecorator(Class proxyInterface, Provider delegate, String interceptors) {
 		base = delegate;
-		names = interceptorNames;
+		names = Objutil.ifNull(interceptors, "");
 		constructor = ProxyHandler.getProxyConstructor(proxyInterface == null ? delegate.getType() : proxyInterface);
 	}
 
@@ -38,10 +40,13 @@ public final class ProxyDecorator implements Decorator {
 	public void onStart(Context context) {
 		if (base instanceof Decorator)
 			((Decorator) base).onStart(context);
-		int len = names == null ? 0 : names.length;
-		ArrayList<Interceptor> list = new ArrayList<Interceptor>();
-		for (int i = 0; i < len; i++)
-			list.add((Interceptor) context.getBean(names[i]));
+		List<String>  beanames = Objutil.split(names.trim(), ',');
+		names = null;
+		List<Interceptor> list = new ArrayList<Interceptor>();
+		for (String name : beanames){
+			if(!(name = name.trim()).isEmpty())
+				list.add((Interceptor) context.getBean(name));
+		}
 		if (list.isEmpty()) {
 			for (Provider provider : context.getProviders(Interceptor.class)) {
 				Interceptor aspect = (Interceptor) provider.instance();
@@ -49,8 +54,7 @@ public final class ProxyDecorator implements Decorator {
 					list.add(aspect);
 			}
 		}
-		interceptors = list.toArray(new Interceptor[list.size()]);
-		names = null;
+		intercepts = list.toArray(new Interceptor[list.size()]);
 	}
 
 	@Override
@@ -60,6 +64,6 @@ public final class ProxyDecorator implements Decorator {
 
 	@Override
 	public Object instance() {
-		return Util.newInstance(constructor, new Object[]{new ProxyHandler(base.instance() , interceptors)});
+		return Util.newInstance(constructor, new Object[]{new ProxyHandler(base.instance() , intercepts)});
 	}
 }

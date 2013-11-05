@@ -39,7 +39,7 @@ public interface Binder{
 	 *            proxyIface==null && interceptors==null 无拦截器(不代理).
 	 *
 	 */
-	LifeCtrl put(boolean cache, String name, Provider provider, Class<?> proxyIface, String[] interceptors);
+	LifeCtrl put(boolean cache, String name, Provider provider, Class<?> proxyIface, String interceptors);
 
 	/**
 	 *

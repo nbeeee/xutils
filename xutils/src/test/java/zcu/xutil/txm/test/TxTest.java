@@ -91,7 +91,7 @@ public class TxTest {
 		ctx = CFG.build(CFG.root() ,new Config(){
 			public void config(Binder b) throws Exception {
 				typ(Query.class, b.ref("datasource")).uni(b,"query");
-				typ(EntityDaoImpl.class, b.ref("query")).uni(b,"entityDao",null);
+				typ(EntityDaoImpl.class, b.ref("query")).uni(b,"entityDao",null,"");
 				val(new TxTemplate()).set("txManager",b.ref("txmanager")).uni(b,"txTemplate");
 				val(new TxTemplate(Propagation.REQUIRES_NEW)).set("txManager",b.ref("txmanager")).uni(b,"reqNewTemplate");
 			}

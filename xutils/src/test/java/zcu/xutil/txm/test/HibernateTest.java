@@ -64,7 +64,7 @@ public class HibernateTest{
 				val(new TxTemplate()).uni(b,"txTemplate");
 				val(new TxTemplate(Propagation.REQUIRES_NEW)).uni(b,"reqNewTemplate");
 				val(new TxInterceptor()).uni(b,"txIntercept");
-				typ(OsTest.class,b.ref("manager")).uni(b,"ostest",null);
+				typ(OsTest.class,b.ref("manager")).uni(b,"ostest",null,"");
 			}
 		});
 		final Query query = (Query) ctx.getBean("query");
