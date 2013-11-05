@@ -46,7 +46,7 @@ public class EventDaoTest {
 		}
 
 		@Override
-		public Object sendToRemote(Event canonical, int timeoutMillis) throws Throwable {
+		public Object sendToRemote(Event canonical, int timeoutMillis,boolean test) throws Throwable {
 			targetremote = canonical;
 			logger.info("remote: {}" ,canonical);
 			return null;

@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.sql.Timestamp;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +52,6 @@ import org.jgroups.blocks.RequestOptions;
 import org.jgroups.blocks.ResponseMode;
 import org.jgroups.util.UUID;
 
-import zcu.xutil.Constants;
 import zcu.xutil.Disposable;
 import zcu.xutil.DisposeManager;
 import zcu.xutil.Logger;
@@ -70,8 +70,7 @@ import zcu.xutil.utils.ProxyHandler;
  * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
-final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, MessageListener, Disposable {
-	private static final boolean testmode = Boolean.parseBoolean(Objutil.systring(Constants.XUTILS_MSG_TEST));
+final class BrokerImpl extends BrokerAgent implements Broker, Server, RequestHandler, MessageListener, Disposable {
 	private static final StackTraceElement[] emptystacks = {};
 	static final AtomicLong lastUsed = new AtomicLong();
 	static final RequestOptions defalutOptions = new RequestOptions(ResponseMode.GET_ALL, 30000);
@@ -280,12 +279,12 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 	}
 
 	@Override
-	public ServiceObject getLocalService(String name) {
+	protected ServiceObject getLocalService(String name) {
 		return serviceObjects.get(name);
 	}
 
 	@Override
-	public Object sendToRemote(Event event, int millis) throws Throwable {
+	protected Object sendToRemote(Event event, int millis,boolean testmode) throws Throwable {
 		Message msg = toMessage(event);
 		RequestOptions options = millis > 0 ? new RequestOptions(ResponseMode.GET_ALL, millis) : defalutOptions;
 		Object ret = Event.unmarshall(ByteArray.toStream(select(event.getName(), testmode).dispatch(msg, options)));
@@ -326,7 +325,6 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 
 	@Override
 	public Collection<String> getServices() {
-		// TODO Auto-generated method stub
 		return Collections.unmodifiableSet(serviceObjects.keySet());
 	}
 
@@ -390,6 +388,7 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 		final int timeoutMillis = gs.timeoutMillis();
 		final int expireMinutes = gs.expireMinutes();
 		final String cname = iface.getName().intern();
+		final boolean testmode = isTestMode(cname);
 		InvocationHandler h = new InvocationHandler() {
 			@Override
 			public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
@@ -401,17 +400,17 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 				if (destroyed)
 					throw new IllegalStateException("Broker destroyed.");
 				if (event.syncall = syncmode)
-					return sobj == null ? sendToRemote(event, timeoutMillis) : sobj.handle(event);
+					return sobj == null ? sendToRemote(event, timeoutMillis,testmode) : sobj.handle(event);
 				ret = Objutil.defaults(m.getReturnType());
 				if (expireMinutes > 0)
-					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
+					event.setExpire(new Timestamp(Util.now() + expireMinutes * 60000L));
 				try {
 					if (sobj != null) {
 						sobj.handle(event);
 						return ret;
 					}
 					if (sendprefer && !blocked) {
-						sendToRemote(event, timeoutMillis);
+						sendToRemote(event, timeoutMillis,testmode);
 						return ret;
 					}
 				} catch (IllegalMsgException e) {
@@ -556,19 +555,16 @@ final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, M
 
 		@Override
 		public Address getAddress() {
-			// TODO Auto-generated method stub
 			return addr;
 		}
 
 		@Override
 		public int getVerison() {
-			// TODO Auto-generated method stub
 			return version;
 		}
 
 		@Override
 		public List<String> getServices() {
-			// TODO Auto-generated method stub
 			return services;
 		}
 	}

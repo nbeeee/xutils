@@ -15,9 +15,32 @@
  */
 package zcu.xutil.msg.impl;
 
-public interface BrokerAgent {
-	ServiceObject getLocalService(String canonicalName);
+import java.util.List;
 
-	Object sendToRemote(Event canonical, int timeoutMillis) throws Throwable;
+import zcu.xutil.Constants;
+import zcu.xutil.Objutil;
+
+public abstract class BrokerAgent {
+	private static final List<String> testServices;
+	static {
+		String s = Objutil.systring(Constants.XUTILS_MSG_TEST);
+		if (s == null)
+			testServices = null;
+		else {
+			List<String> list = Objutil.split(s.trim(), ',');
+			int len = list.size();
+			while (--len >= 0)
+				list.set(len, list.get(len).trim().intern());
+			testServices = list;
+		}
+	}
+	static boolean isTestMode(String services) {
+		return testServices == null ? false : (testServices.isEmpty() || testServices.indexOf(services) >= 0 );
+	}
+	protected ServiceObject getLocalService(String canonicalName){
+		return null;
+	}
+
+	protected abstract Object sendToRemote(Event canonical, int timeoutMillis,boolean testmode) throws Throwable;
 
 }

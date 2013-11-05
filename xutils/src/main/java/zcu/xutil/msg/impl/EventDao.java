@@ -16,9 +16,9 @@
 package zcu.xutil.msg.impl;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,10 +46,7 @@ import zcu.xutil.utils.Util;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 public final class EventDao implements Runnable {
-	private static final Logger discardLogger = Logger.getLogger(Event.class);
-
-	static final Handler<List<Event>> listHandle = new BeanRow<Event>(Event.class).list(25, 50);
-	static final Logger logger = Logger.getLogger(EventDao.class);
+	
 	static final String create = "CREATE TABLE EVENT (ID IDENTITY,NAME VARCHAR(100),VALUE VARCHAR(100),"
 			+ "DATAS VARBINARY(8190),EXPIRE TIMESTAMP,PRIMARY KEY(ID))";
 	static final String retrieve = "SELECT ID,VALUE,DATAS,EXPIRE FROM EVENT WHERE EXPIRE IS NOT NULL AND NAME=? ORDER BY ID";
@@ -58,14 +55,17 @@ public final class EventDao implements Runnable {
 	static final String delete = "DELETE FROM EVENT WHERE EXPIRE IS NULL";
 	static final String eventNames = "SELECT DISTINCT NAME FROM EVENT";
 	static final String insertSql = "INSERT INTO EVENT VALUES(DEFAULT,:name,:value,:datas,:expire)";
+	static final Handler<List<Event>> listHandle = new BeanRow<Event>(Event.class).list(25, 50);
+	static final Logger logger = Logger.getLogger(EventDao.class);
+	private static final Logger discardLogger = Logger.getLogger(Event.class);
 
 	final Query query;
 	final BrokerAgent broker;
-	private final NpSQL insert;
+	final AtomicInteger sendNumber = new AtomicInteger();
 	private final AtomicInteger discardNumber = new AtomicInteger();
 	private final AtomicReference<Service[]> allService;
 	private volatile Thread worker; // blinker moribund
-	
+	private final NpSQL insert;
 
 	public EventDao(final String name, DataSource ds, final BrokerAgent agent) {
 		if (ds == null) {
@@ -128,7 +128,7 @@ public final class EventDao implements Runnable {
 
 	void store(Event event) {
 		if (event.getExpire() == null) // default expire 2 hours
-			event.setExpire(new Date(Util.now() + 7200 * 1000));
+			event.setExpire(new Timestamp(Util.now() + 7200 * 1000));
 		try {
 			query.entityUpdate(insert, event);
 		} catch (SQLException e) {
@@ -147,7 +147,7 @@ public final class EventDao implements Runnable {
 	}
 
 	void discardLogger(Event event, Object cause) {
-		discardNumber.getAndIncrement();
+		discardNumber.incrementAndGet();
 		Object params;
 		try {
 			params = event.parameters();
@@ -201,22 +201,17 @@ public final class EventDao implements Runnable {
 				// ignore
 			}
 		}
-		logger.warn("SendDaemon shutdown.discard number:{} , Names:{}", discardNumber, allService.get());
+		logger.warn("SendDaemon shutdown.send: {} ,discard: {}", sendNumber,discardNumber);
 	}
 
 	private final class Service {
 		final String canonicalName;
+		final boolean testmode;
 		final Deque<Event> events = new ArrayDeque<Event>();
-		private int sendNumber;
 		private long untilMillis;
 
 		Service(String name) {
-			this.canonicalName = name.intern();
-		}
-
-		@Override
-		public String toString() {
-			return canonicalName + " send " + sendNumber;
+			this.testmode =BrokerAgent.isTestMode(canonicalName = name.intern());
 		}
 
 		boolean sendRequired(long current) throws SQLException {
@@ -250,10 +245,10 @@ public final class EventDao implements Runnable {
 			while ((event = events.peekFirst()) != null) {
 				try {
 					if (sobj == null)
-						broker.sendToRemote(event, 0);
+						broker.sendToRemote(event, 0, testmode);
 					else
 						sobj.handle(event);
-					sendNumber++;
+					sendNumber.incrementAndGet();
 				} catch (IllegalMsgException e) {
 					discardLogger(event, e);
 				} catch (UnavailableException e) {

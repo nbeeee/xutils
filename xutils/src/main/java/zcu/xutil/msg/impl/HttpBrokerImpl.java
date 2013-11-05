@@ -24,9 +24,9 @@ import java.lang.reflect.Proxy;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.sql.Timestamp;
 import java.util.List;
 
-import zcu.xutil.Constants;
 import zcu.xutil.Disposable;
 import zcu.xutil.DisposeManager;
 import zcu.xutil.Logger;
@@ -40,8 +40,7 @@ import zcu.xutil.msg.impl.MSGException;
 import zcu.xutil.utils.Util;
 import zcu.xutil.utils.ProxyHandler;
 
-final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
-	private static final boolean testmode = Boolean.parseBoolean(Objutil.systring(Constants.XUTILS_MSG_TEST));
+final class HttpBrokerImpl  extends BrokerAgent implements SimpleBroker, Disposable {
 	static final Logger logger = Logger.getLogger(HttpBrokerImpl.class);
 	private final URL[] urls;
 	private final String credentials;
@@ -65,7 +64,7 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 		eventDao.start();
 	}
 
-	private synchronized HttpURLConnection openConnection(int timeout) {
+	private synchronized HttpURLConnection openConnection(int timeout,boolean testmode) {
 		HttpURLConnection conn;
 		for (int i = 0; i < urls.length; i++) {
 			URL url = urls[current];
@@ -104,14 +103,9 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 	}
 
 	@Override
-	public ServiceObject getLocalService(String canonicalName) {
-		return null;
-	}
-
-	@Override
-	public Object sendToRemote(Event event, int timeoutMillis) throws Throwable {
+	protected Object sendToRemote(Event event, int timeoutMillis,boolean testmode) throws Throwable {
 		Object ret;
-		HttpURLConnection conn = openConnection(timeoutMillis);
+		HttpURLConnection conn = openConnection(timeoutMillis,testmode);
 		try {
 			DataOutputStream out = new DataOutputStream(conn.getOutputStream());
 			try {
@@ -162,6 +156,7 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 		final int timeoutMillis = gs.timeoutMillis();
 		final int expireMinutes = gs.expireMinutes();
 		final String cname = iface.getName().intern();
+		final boolean testmode = isTestMode(cname);
 		InvocationHandler h = new InvocationHandler() {
 			@Override
 			public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
@@ -172,13 +167,13 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 				if (destroyed)
 					throw new IllegalStateException("Broker destroyed.");
 				if (event.syncall = syncmode)
-					return sendToRemote(event, timeoutMillis);
+					return sendToRemote(event, timeoutMillis,testmode);
 				ret = Objutil.defaults(m.getReturnType());
 				if (expireMinutes > 0)
-					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
+					event.setExpire(new Timestamp(Util.now() + expireMinutes * 60000L));
 				try {
 					if (sendprefer && available){
-						sendToRemote(event, timeoutMillis);
+						sendToRemote(event, timeoutMillis,testmode);
 						return ret;
 					}
 				} catch (IllegalMsgException e) {

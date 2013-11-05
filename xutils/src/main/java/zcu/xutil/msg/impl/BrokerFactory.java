@@ -22,7 +22,7 @@ import zcu.xutil.msg.Broker;
 import static zcu.xutil.Constants.*;
 
 public class BrokerFactory {
-	// singleton_name="yeepaytcp"
+
 	private static final String CONFIG = "TCP(singleton_name=xutils:oob_thread_pool_enabled=false;enable_diagnostics=false):MPING:MERGE2:FD_SOCK:FD(timeout=10000;max_tries=3):"
 			+ "VERIFY_SUSPECT:pbcast.NAKACK2(use_mcast_xmit=false):UNICAST2:pbcast.STABLE:pbcast.GMS:pbcast.FLUSH";
 
