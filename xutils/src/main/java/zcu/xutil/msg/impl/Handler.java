@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.msg.GroupService;
-import zcu.xutil.msg.SaveForRecallException;
 import zcu.xutil.utils.ProxyHandler;
 import zcu.xutil.utils.Util;
 
@@ -99,7 +98,7 @@ public final class Handler implements ThreadFactory {
 					public void run() {
 						try {
 							invoke(event);
-						} catch (SaveForRecallException e) {
+						} catch (UnavailableException e) {
 							eventDao.store(event);
 							logger.warn("call {} fail. store it for later call.", e, event.getName());
 						} catch (Throwable e) {

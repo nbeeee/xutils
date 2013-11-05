@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package zcu.xutil.misc;
+package zcu.xutil.msg.impl;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -30,16 +30,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import zcu.xutil.Objutil;
-
-import zcu.xutil.msg.BrokerMgt;
-import zcu.xutil.msg.impl.BrokerFactory;
-import zcu.xutil.msg.impl.Event;
-import zcu.xutil.msg.impl.UnavailableException;
+import zcu.xutil.msg.Server;
 
 public class ServiceServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private transient Map<String, String> permissions;
-	private transient BrokerMgt broker;
+	private transient BrokerImpl broker;
 
 	@Override
 	public void init(ServletConfig config) throws ServletException {
@@ -53,12 +49,11 @@ public class ServiceServlet extends HttpServlet {
 				permissions.put(s, s);
 			}
 		}
-		broker =(BrokerMgt) BrokerFactory.instance();
+		broker =(BrokerImpl) BrokerFactory.instance();
 	}
 
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
 		resp.setContentType("text/html; charset=UTF-8");
 		PrintWriter out = resp.getWriter();
 		out.write("<html>\n<head>\n<title>节点和服务 </title>\n</head>\n<body>\n");
@@ -69,16 +64,16 @@ public class ServiceServlet extends HttpServlet {
 		out.write("\n<h3>所有节点 </h3><br>\n");
 		int i = 0;
 		
-		for (String member : broker.getMembers()) {
+		for (Object member : broker.getMembers()) {
 			if (i > 0) {
 				out.write(i % 8 == 0 ? "<br>" : "&nbsp;&nbsp;&nbsp;");
 				i++;
 			}
-			out.write(member);
+			out.write(member.toString());
 		}
 		out.write("\n<h3>所有服务器 </h3>\n");
-		for (String s : broker.getServers())
-			out.append(s).append("<br>");
+		for (Server s : broker)
+			out.append(s.toString()).append("<br>");
 		out.write("\n</body>\n</html>\n");
 	}
 

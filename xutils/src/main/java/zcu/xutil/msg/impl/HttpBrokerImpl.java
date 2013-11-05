@@ -121,10 +121,10 @@ final class HttpBrokerImpl implements SimpleBroker, BrokerAgent, Disposable {
 			}
 			int code = conn.getResponseCode();
 			if (code != HttpURLConnection.HTTP_OK) {
-				if (code == HttpURLConnection.HTTP_UNAVAILABLE)
+				if (code == HttpURLConnection.HTTP_UNAVAILABLE){
 					unavailable();
-				else
-					available = true;
+					throw new UnavailableException("HTTP_UNAVAILABLE");
+				}
 				throw new MSGException("http status: " + code);
 			}
 			available = true;

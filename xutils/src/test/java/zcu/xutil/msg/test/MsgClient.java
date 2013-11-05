@@ -4,28 +4,28 @@ import java.sql.SQLException;
 import java.util.Date;
 
 import zcu.xutil.Logger;
-import zcu.xutil.msg.BrokerMgt;
-import zcu.xutil.msg.GroupService;
+import zcu.xutil.msg.Server;
 import zcu.xutil.msg.impl.BrokerFactory;
-import zcu.xutil.utils.Util;
 
 
-public class MsgClient implements Runnable{
-	static{
-	System.setProperty("java.net.preferIPv4Stack", "true");
+public class MsgClient implements Runnable {
+	static {
+		System.setProperty("java.net.preferIPv4Stack", "true");
 	}
 	static Logger logger = Logger.getLogger(MsgClient.class);
 	RemoteService rs;
-	ExceptionService es ;
+	ExceptionService es;
 	TestService ts;
-	MsgClient(RemoteService rs){
-		this.rs=rs;
+
+	MsgClient(RemoteService rs) {
+		this.rs = rs;
 	}
+
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		
+
 		try {
 			Thread.sleep(1000);
 		} catch (InterruptedException e1) {
@@ -37,14 +37,11 @@ public class MsgClient implements Runnable{
 		BrokerFactory.instance().addListener(notify);
 		RemoteService rs = BrokerFactory.instance().create(RemoteService.class);
 		ExceptionService es = BrokerFactory.instance().create(ExceptionService.class);
-		TestService ts =BrokerFactory.instance().create(TestService.class);
+		TestService ts = BrokerFactory.instance().create(TestService.class);
 
-		BrokerMgt mgt =  ((BrokerMgt)BrokerFactory.instance());
-		
-		logger.info("allmembers {}", mgt.getMembers());
-		logger.info("Servers {}", mgt.getServers());
-		logger.info("local info {}", mgt);
-
+		logger.info("allmembers {}", BrokerFactory.instance().getMembers());
+		for (Server s : BrokerFactory.instance())
+			logger.info("Server {}", s);
 
 		try {
 			Thread.sleep(1000);
@@ -52,25 +49,25 @@ public class MsgClient implements Runnable{
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		MsgClient mclient= new MsgClient(rs);
-		mclient.ts=ts;
-		mclient.es=es;
-		new Thread(mclient,"ClientThread").start();
-		String str ="MSGCLIENT";
+		MsgClient mclient = new MsgClient(rs);
+		mclient.ts = ts;
+		mclient.es = es;
+		new Thread(mclient, "ClientThread").start();
+		String str = "MSGCLIENT";
 
-		Logger remotelog =Logger.getLogger("remote");
+		Logger remotelog = Logger.getLogger("remote");
 
 		for (int i = 0; true; i++) {
 			Date date = new Date();
 
-			remotelog.info("MSGCLIENT : {} {}",date,i );
-			rs.hello(str,i);
-			try{
+			remotelog.info("MSGCLIENT : {} {}", date, i);
+			rs.hello(str, i);
+			try {
 				es.ansyException(i);
 			} catch (Exception e) {
-				logger.warn("!!!!!! fail ansyCall {}", e,date);
+				logger.warn("!!!!!! fail ansyCall {}", e, date);
 			}
-			BrokerFactory.instance().sendToAll(true,"MSGCLIENT multicast",str);
+			BrokerFactory.instance().sendToAll(true, "MSGCLIENT multicast", str);
 			try {
 
 				Thread.sleep(2000);
@@ -82,7 +79,7 @@ public class MsgClient implements Runnable{
 	}
 
 	public void run() {
-		String str ="MSGCLIENT MSGCLIENT: ";
+		String str = "MSGCLIENT MSGCLIENT: ";
 		for (int i = 0; true; i++) {
 			Date date = new Date();
 			rs.ansyCall(date, str);
@@ -95,7 +92,7 @@ public class MsgClient implements Runnable{
 				logger.warn("!!!!!! fail ansyCall", e1);
 			}
 			ts.call(i);
-			ts.signal(i, true, i, i, 'c', new byte[]{1,2,3});
+			ts.signal(i, true, i, i, 'c', new byte[] { 1, 2, 3 });
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {

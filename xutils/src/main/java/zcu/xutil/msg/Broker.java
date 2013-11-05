@@ -15,6 +15,10 @@
  */
 package zcu.xutil.msg;
 
+import java.util.List;
+
+import org.jgroups.Address;
+
 /**
  * Message Broker. 高可用的消息服务.同时支持集群服务模式和节点服务模式.<br>
  * 集群服务模式: 通过 startServer 方法 部署服务,客户端通过 create方法
@@ -22,11 +26,11 @@ package zcu.xutil.msg;
  * 节点服务模式: 通过{@link #addListener(MsgListener)}接受消息.使用
  * {@link #sendToAll(boolean, String, String, Object...)}
  * {@link #sendToNode(String, String, String, Object...)}异步发送消息. 消息不保存.<br>
- *
+ * 
  * 客户端使用例子:
- *
+ * 
  * <pre>
- *
+ * 
  * @GroupService
  * public interface RemoteService{
  * 	String method(String str,int i);
@@ -36,9 +40,9 @@ package zcu.xutil.msg;
  * 	RemoteService remoteService=BrokerFactory.instance().create(RemoteService.class);
  * 	// use remoteService
  * </pre>
- *
+ * 
  * 服务端使用例子(服务可部署在多台服务器,每台服务器可部署多个服务):
- *
+ * 
  * <pre>
  *  public class RemoteServiceImpl implements RemoteService {
  * 	private static final Logger logger = Logger.getLogger();
@@ -58,23 +62,22 @@ package zcu.xutil.msg;
  * 	// use remoteService
  * 	...
  * </pre>
- *
+ * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
-public interface Broker extends SimpleBroker {
+public interface Broker extends SimpleBroker, Iterable<Server> {
 	/**
 	 * 部署服务.
-	 *
+	 * 
 	 * @param services
 	 *            接口服务实现
-	 *
+	 * 
 	 */
 	void startServer(Object... services);
 
-
 	/**
 	 * 广播事件. 接收者为 {@link MsgListener} 消息不保存.
-	 *
+	 * 
 	 * @param includeSelf
 	 *            是否包括发给自身, ture 发给自身, false 不发给自身
 	 * @param eventName
@@ -89,7 +92,7 @@ public interface Broker extends SimpleBroker {
 
 	/**
 	 * 发送事件. 接收者为 {@link MsgListener} 消息不保存.
-	 *
+	 * 
 	 * @param nodeName
 	 *            目的节点名.
 	 * @param eventName
@@ -102,31 +105,36 @@ public interface Broker extends SimpleBroker {
 
 	void sendToNode(String nodeName, String eventName, String eventValue, Object... params);
 
+	void sendToNode(Address address, String eventName, String eventValue, Object... params);
+
 	/**
 	 * 增加事件收听器.
-	 *
+	 * 
 	 * @param listener
 	 *            {@link MsgListener}
-	 *
+	 * 
 	 */
 	boolean addListener(MsgListener listener);
 
 	/**
 	 * 删除事件收听器.
-	 *
+	 * 
 	 * @param listener
 	 *            {@link MsgListener}
-	 *
+	 * 
 	 */
 	boolean removeListener(MsgListener listener);
 
 	/**
 	 * 设置节点监视通知,当节点机加入或离开时调用
-	 *
+	 * 
 	 * @param notify
 	 *            {@link Notification}
-	 *
+	 * 
 	 */
 	void setNotification(Notification notify);
 
+	List<Address> getMembers();
+
+	Address getAddress();
 }

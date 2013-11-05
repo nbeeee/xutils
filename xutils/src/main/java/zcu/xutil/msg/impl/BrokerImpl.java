@@ -26,7 +26,9 @@ import java.lang.reflect.Proxy;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.RandomAccess;
@@ -56,10 +58,10 @@ import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.XutilRuntimeException;
 import zcu.xutil.msg.Broker;
-import zcu.xutil.msg.BrokerMgt;
 import zcu.xutil.msg.GroupService;
 import zcu.xutil.msg.MsgListener;
 import zcu.xutil.msg.Notification;
+import zcu.xutil.msg.Server;
 import zcu.xutil.utils.ByteArray;
 import zcu.xutil.utils.Util;
 import zcu.xutil.utils.ProxyHandler;
@@ -68,7 +70,7 @@ import zcu.xutil.utils.ProxyHandler;
  * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
-final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler, MessageListener, Disposable {
+final class BrokerImpl implements Broker, BrokerAgent, Server, RequestHandler, MessageListener, Disposable {
 	private static final boolean testmode = Boolean.parseBoolean(Objutil.systring(Constants.XUTILS_MSG_TEST));
 	private static final StackTraceElement[] emptystacks = {};
 	static final AtomicLong lastUsed = new AtomicLong();
@@ -193,7 +195,13 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 	public void sendToNode(String nodeName, String eventName, String eventValue, Object... params) {
 		Address dest = UUIL.get(nodeName);
 		if (dest == null)
-			return;
+			logger.info("node {} is unavailable.", nodeName);
+		else
+			sendToNode(dest, eventName, eventValue, params);
+	}
+
+	@Override
+	public void sendToNode(Address dest, String eventName, String eventValue, Object... params) {
 		Event event = new Event(eventName, eventValue, params);
 		if (!dest.equals(localAddr)) {
 			Message msg = toMessage(event);
@@ -279,15 +287,14 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 	@Override
 	public Object sendToRemote(Event event, int millis) throws Throwable {
 		Message msg = toMessage(event);
-		RequestOptions options = millis > 0 ? new RequestOptions(ResponseMode.GET_ALL, millis): defalutOptions;
+		RequestOptions options = millis > 0 ? new RequestOptions(ResponseMode.GET_ALL, millis) : defalutOptions;
 		Object ret = Event.unmarshall(ByteArray.toStream(select(event.getName(), testmode).dispatch(msg, options)));
 		if (ret instanceof Throwable)
 			throw (Throwable) ret;
 		return ret;
 	}
 
-	@Override
-	public byte[] proxy(Event event, boolean test) {
+	byte[] proxy(Event event, boolean test) {
 		String name = event.getName();
 		ServiceObject sobj = getLocalService(name);
 		try {
@@ -302,26 +309,30 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 	}
 
 	@Override
-	public List<String> getServers() {
-		List<String> ret = new ArrayList<String>(serverMap.size() + 1);
-		if (!serviceObjects.isEmpty())
-			ret.add(BrokerImpl.this.toString());
-		for (Snode s : serverMap.values())
-			ret.add(s.toString());
-		return ret;
+	public Iterator<Server> iterator() {
+		return Util.concat(serviceObjects.isEmpty() ? null : Collections.singletonList(this).iterator(), serverMap
+				.values().iterator());
 	}
 
 	@Override
-	public List<String> getMembers() {
-		StringBuilder sb = new StringBuilder(32);
-		Map<?, ?> map = (Map) channel
-				.down(new org.jgroups.Event(org.jgroups.Event.GET_LOGICAL_PHYSICAL_MAPPINGS, null));
-		List<String> ret = new ArrayList<String>(map.size());
-		for (Address addr : membship.members) {
-			ret.add(sb.append(addr).append('=').append(map.get(addr)).toString());
-			sb.setLength(0);
-		}
-		return ret;
+	public Address getAddress() {
+		return localAddr;
+	}
+
+	@Override
+	public int getVerison() {
+		return srvstamp;
+	}
+
+	@Override
+	public Collection<String> getServices() {
+		// TODO Auto-generated method stub
+		return Collections.unmodifiableSet(serviceObjects.keySet());
+	}
+
+	@Override
+	public List<Address> getMembers() {
+		return Collections.unmodifiableList(membship.members);
 	}
 
 	@Override
@@ -339,7 +350,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 			return Event.marshall(sobj.handle(event));
 		} catch (MSGException e) {
 			throw e;
-		}catch (Throwable e) {
+		} catch (Throwable e) {
 			clearStack(e);
 			return Event.marshall(e);
 		}
@@ -395,11 +406,11 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 				if (expireMinutes > 0)
 					event.setExpire(new java.util.Date(Util.now() + expireMinutes * 60000L));
 				try {
-					if (sobj != null){
+					if (sobj != null) {
 						sobj.handle(event);
 						return ret;
 					}
-					if (sendprefer && !blocked){
+					if (sendprefer && !blocked) {
 						sendToRemote(event, timeoutMillis);
 						return ret;
 					}
@@ -428,7 +439,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 				}
 		}
 	}
-	
+
 	private final class Membship implements MembershipListener {
 		volatile Snode suspected;
 		volatile List<Address> members;
@@ -512,8 +523,8 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 		}
 	}
 
-	private final class Snode {
-		final String[] services;
+	private final class Snode implements Server {
+		private final List<String> services;
 		final int version;
 		final Address addr;
 		volatile long used;
@@ -521,7 +532,7 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 		Snode(Address address, int ver, String[] array) {
 			this.version = ver;
 			this.addr = address;
-			this.services = array;
+			this.services = Collections.unmodifiableList(Arrays.asList(array));
 		}
 
 		byte[] dispatch(Message msg, RequestOptions options) {
@@ -535,12 +546,30 @@ final class BrokerImpl implements Broker, BrokerMgt, BrokerAgent, RequestHandler
 			}
 			if (o instanceof byte[])
 				return (byte[]) o;
-			throw (o instanceof MSGException) ? (MSGException)o : new MSGException("unexpected retval:" + o);
+			throw (o instanceof MSGException) ? (MSGException) o : new MSGException("unexpected retval:" + o);
 		}
 
 		@Override
 		public String toString() {
-			return "address= " + addr + " , services=" + Arrays.toString(services) + " version= " + version;
+			return "address= " + addr + " , services=" + services + " version= " + version;
+		}
+
+		@Override
+		public Address getAddress() {
+			// TODO Auto-generated method stub
+			return addr;
+		}
+
+		@Override
+		public int getVerison() {
+			// TODO Auto-generated method stub
+			return version;
+		}
+
+		@Override
+		public List<String> getServices() {
+			// TODO Auto-generated method stub
+			return services;
 		}
 	}
 

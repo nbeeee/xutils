@@ -16,7 +16,12 @@
     	<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %lo{35} - %msg%n</pattern>
   	</encoder>
   </appender>
-
+  <!-- Notice the %file and %line patterns in the Pattern. -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <layout class="ch.qos.logback.classic.PatternLayout">
+      <Pattern>%date %-5level [%property{xaddr}] [%thread] [%file:%line] %logger - %message%n</Pattern>
+    </layout>
+  </appender>
   <appender name="REMOTE" class="zcu.xutil.misc.RemoteAppender">
     <httpmode>false</httpmode>
     <includeCallerData>false</includeCallerData>
@@ -34,6 +39,11 @@
   <logger name="remote" additivity="false">
      <level value="debug"/>
      <appender-ref ref="REMOTE"/>
+  </logger>
+  
+  <logger name="loggerfor">
+     <level value="debug"/>
+     <appender-ref ref="CONSOLE"/>
   </logger>
 
 </configuration>

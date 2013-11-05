@@ -17,7 +17,7 @@ package zcu.xutil.msg.impl;
 
 public final class IllegalMsgException extends MSGException{
 	private static final long serialVersionUID = 1L;
-	public IllegalMsgException(String message) {
+	IllegalMsgException(String message) {
 		super(message);
 	}
 }

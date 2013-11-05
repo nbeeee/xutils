@@ -387,10 +387,6 @@ public final class Util implements Iterator {
 
 	@SuppressWarnings("unchecked")
 	public static <T> Iterator<T> concat(Iterator<? extends T> a, Iterator<? extends T> b) {
-		if (a == null)
-			return b == null ? Collections.EMPTY_LIST.iterator() : b;
-		if (b == null)
-			return (Iterator) a;
 		return new Util(a, b);
 	}
 
@@ -399,7 +395,7 @@ public final class Util implements Iterator {
 
 	private Util(Iterator a, Iterator b) {
 		one = a;
-		two = b;
+		two = b == null ? Collections.EMPTY_LIST.iterator() : b;
 	}
 
 	@Override

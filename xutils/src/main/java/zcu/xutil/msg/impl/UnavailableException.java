@@ -21,7 +21,9 @@ public final class UnavailableException extends MSGException {
 	public UnavailableException(String message) {
 		super(message);
 	}
-
+	public UnavailableException(String message,Throwable e) {
+		super(message,e);
+	}
 	@Override
 	public Throwable fillInStackTrace() {
 		return this;

@@ -3,7 +3,7 @@
 import java.util.Date;
 
 import zcu.xutil.Logger;
-import zcu.xutil.misc.XLoggerService;
+import zcu.xutil.misc.LogbackService;
 import zcu.xutil.msg.GroupService;
 import zcu.xutil.msg.impl.BrokerFactory;
 import zcu.xutil.utils.Util;
@@ -15,7 +15,7 @@ public class MsgServer{
 	 */
 	public static void main(String[] args){
 		System.setProperty("java.net.preferIPv4Stack", "true");
-		BrokerFactory.instance().startServer(new RemoteServiceImpl(),new TestServer(),new ExceptionServiceImpl(),new XLoggerService());
+		BrokerFactory.instance().startServer(new RemoteServiceImpl(),new TestServer(),new ExceptionServiceImpl(),new LogbackService());
 		Notify notify =new Notify();
 		BrokerFactory.instance().setNotification(notify);
 		BrokerFactory.instance().addListener(notify);

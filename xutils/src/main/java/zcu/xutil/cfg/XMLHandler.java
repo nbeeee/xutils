@@ -72,6 +72,9 @@ public final class XMLHandler extends DefaultHandler {
 		} catch (RuntimeException e) {
 			log("startElement", local);
 			throw e;
+		}catch (Error e) {
+			log("endElement", local);
+			throw e;
 		}
 	}
 
@@ -87,6 +90,9 @@ public final class XMLHandler extends DefaultHandler {
 			} else if (current != null && current.endElement(local))
 				current = current.previous;
 		} catch (RuntimeException e) {
+			log("endElement", local);
+			throw e;
+		}catch (Error e) {
 			log("endElement", local);
 			throw e;
 		}

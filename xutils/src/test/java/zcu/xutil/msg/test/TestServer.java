@@ -7,7 +7,7 @@ import java.util.Date;
 
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
-import zcu.xutil.misc.XLoggerService;
+import zcu.xutil.misc.LogbackService;
 import zcu.xutil.msg.GroupService;
 import zcu.xutil.msg.impl.BrokerFactory;
 import zcu.xutil.msg.impl.Handler;
@@ -29,7 +29,7 @@ public class TestServer implements TestService {
 		remotelog.warn("=================");
 
 		remotelog.warn("=================");
-		BrokerFactory.instance().startServer(new XLoggerService(),new TestServer(),new RemoteServiceImpl());
+		BrokerFactory.instance().startServer(new LogbackService(),new TestServer(),new RemoteServiceImpl());
 		remotelog.warn("=================");
 		remotelog.warn("=================333333");
 		Logger.getLogger("remote").warn("1111111111111111111");

@@ -3,12 +3,11 @@
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Date;
 
 import zcu.xutil.Logger;
-import zcu.xutil.msg.SaveForRecallException;
+import zcu.xutil.msg.impl.UnavailableException;
 
 
 public class RemoteServiceImpl implements RemoteService {
@@ -18,7 +17,7 @@ public class RemoteServiceImpl implements RemoteService {
 	public void hello(String str,int i)  {
 		if(list.indexOf(i)<0){
 			list.add(i);
-			throw new SaveForRecallException("test SaveForRecall"+1);
+			throw new UnavailableException("test SaveForRecall"+1);
 		}else
 			list.remove((Object)i);
 		

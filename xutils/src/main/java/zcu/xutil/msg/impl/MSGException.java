@@ -21,4 +21,7 @@ public class MSGException extends RuntimeException {
 	protected MSGException(String message) {
 		super(message);
 	}
+	protected MSGException(String message,Throwable e) {
+		super(message,e);
+	}
 }

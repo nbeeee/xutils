@@ -30,8 +30,6 @@ public interface Constants {
 	public static final String XUTILS_MSG_HTTP_PASSWORD = "xutils.msg.http.password";
 	
 	
-	public static final String XUTILS_MSG_LOGBACK_CONFIG = "xutils.msg.logback.config";
-
 	// =================key in xutils.properties file end===============
 
 }
