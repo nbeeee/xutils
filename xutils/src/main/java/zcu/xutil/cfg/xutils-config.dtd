@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!ELEMENT beans (array|bean|alias|import)+>
 <!ELEMENT import (#PCDATA)>
-<!ATTLIST import key CDATA #IMPLIED>
+<!ATTLIST import name CDATA #IMPLIED>
 <!ELEMENT bean ((arg|bean|array)*,(set|call)*,aop?)>
 <!ATTLIST bean id CDATA #IMPLIED>
 <!ATTLIST bean class CDATA #IMPLIED>

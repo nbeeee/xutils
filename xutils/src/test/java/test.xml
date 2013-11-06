@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE beans PUBLIC "-//XUTILS//DTD CONFIG//EN" "xutils-config.dtd">
 <beans>
-	<import key="mystore">MYSTORE java.lang.String</import>
-	<import key="map">java.util.HashMap</import>
+	<import name="mystore">MYSTORE java.lang.String</import>
+	<import name="map">java.util.HashMap</import>
 	<import>file:///${xutils.home}/config.xml</import>
 	<array class="java.lang.Object" id="@number">
 		<arg class="byte">0</arg>

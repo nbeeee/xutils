@@ -63,7 +63,7 @@ public final class XMLHandler extends DefaultHandler {
 			throws SAXException {
 		try {
 			if ("import".equals(local))
-				varkey = attrs.getValue("key");
+				varkey = attrs.getValue("name");
 			else if ("bean".equals(local) || "array".equals(local) || "alias".equals(local))
 				current = new Entry(local, attrs, current);
 			else if (current != null)
