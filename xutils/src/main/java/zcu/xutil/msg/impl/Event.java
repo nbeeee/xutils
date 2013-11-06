@@ -26,7 +26,6 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -185,7 +184,7 @@ public final class Event implements Externalizable {
 	private String name;
 	private String value;
 	private byte[] datas;
-	private Timestamp expire;
+	private Long expire;
 
 	private transient Long id;
 	private transient volatile Object[] objects;
@@ -267,11 +266,11 @@ public final class Event implements Externalizable {
 		objects = null;
 	}
 
-	public Timestamp getExpire() {
+	public Long getExpire() {
 		return expire;
 	}
 
-	public void setExpire(Timestamp date) {
+	public void setExpire(Long date) {
 		this.expire = date;
 	}
 
@@ -332,7 +331,7 @@ public final class Event implements Externalizable {
 		if ((ctrl & 0x20000000) != 0)
 			value = in.readUTF();
 		if ((ctrl & 0x10000000) != 0)
-			expire = new Timestamp(in.readLong());
+			expire =in.readLong();
 		byte[] buf = new byte[ctrl & 0x0fffffff];
 		in.readFully(buf);
 		setDatas(buf);
@@ -357,7 +356,7 @@ public final class Event implements Externalizable {
 		if (value != null)
 			out.writeUTF(value);
 		if (expire != null)
-			out.writeLong(expire.getTime());
+			out.writeLong(expire);
 		out.write(buf);
 	}
 

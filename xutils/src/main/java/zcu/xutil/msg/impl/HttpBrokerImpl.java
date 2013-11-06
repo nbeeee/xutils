@@ -24,7 +24,6 @@ import java.lang.reflect.Proxy;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.sql.Timestamp;
 import java.util.List;
 
 import zcu.xutil.Disposable;
@@ -170,7 +169,7 @@ final class HttpBrokerImpl  extends BrokerAgent implements SimpleBroker, Disposa
 					return sendToRemote(event, timeoutMillis,testmode);
 				ret = Objutil.defaults(m.getReturnType());
 				if (expireMinutes > 0)
-					event.setExpire(new Timestamp(Util.now() + expireMinutes * 60000L));
+					event.setExpire(Util.now() + expireMinutes * 60000L);
 				try {
 					if (sendprefer && available){
 						sendToRemote(event, timeoutMillis,testmode);

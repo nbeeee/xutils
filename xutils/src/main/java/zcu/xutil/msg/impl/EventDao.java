@@ -16,7 +16,6 @@
 package zcu.xutil.msg.impl;
 
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
@@ -48,7 +47,7 @@ import zcu.xutil.utils.Util;
 public final class EventDao implements Runnable {
 	
 	static final String create = "CREATE TABLE EVENT (ID IDENTITY,NAME VARCHAR(100),VALUE VARCHAR(100),"
-			+ "DATAS VARBINARY(8190),EXPIRE TIMESTAMP,PRIMARY KEY(ID))";
+			+ "DATAS VARBINARY(8190),EXPIRE BIGINT,PRIMARY KEY(ID))";
 	static final String retrieve = "SELECT ID,VALUE,DATAS,EXPIRE FROM EVENT WHERE EXPIRE IS NOT NULL AND NAME=? ORDER BY ID";
 	static final String updateToSent = "UPDATE EVENT SET EXPIRE=NULL WHERE ID=?";
 	static final String drop = "DROP TABLE EVENT";
@@ -128,7 +127,7 @@ public final class EventDao implements Runnable {
 
 	void store(Event event) {
 		if (event.getExpire() == null) // default expire 2 hours
-			event.setExpire(new Timestamp(Util.now() + 7200 * 1000));
+			event.setExpire(Util.now() + 7200 * 1000);
 		try {
 			query.entityUpdate(insert, event);
 		} catch (SQLException e) {
@@ -230,7 +229,7 @@ public final class EventDao implements Runnable {
 			List<Event> ret = query.query(retrieve, listHandle, canonicalName);
 			for (Event e : ret) {
 				e.setName(canonicalName);
-				if (e.getExpire().getTime() < current) {
+				if (e.getExpire() < current) {
 					query.update(updateToSent, e.getId());
 					discardLogger(e, "expire");
 				} else

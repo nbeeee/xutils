@@ -1,7 +1,10 @@
 ﻿package zcu.xutil.cfg;
 
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 
+import zcu.xutil.XutilRuntimeException;
 import zcu.xutil.utils.Convertor;
 
 public final class Instance extends RefCaller {
@@ -13,6 +16,12 @@ public final class Instance extends RefCaller {
 			if (value instanceof String){
 				if (toType == File.class)
 					return new File((String) value);
+				if(toType == URL.class)
+					try {
+						return new URL((String) value);
+					} catch (MalformedURLException e) {
+						throw new XutilRuntimeException(e);
+					}
 			}
 			throw exception(value, toType.getName());
 		}

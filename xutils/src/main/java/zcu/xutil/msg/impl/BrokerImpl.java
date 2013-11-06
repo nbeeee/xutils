@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.sql.Timestamp;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -403,7 +402,7 @@ final class BrokerImpl extends BrokerAgent implements Broker, Server, RequestHan
 					return sobj == null ? sendToRemote(event, timeoutMillis,testmode) : sobj.handle(event);
 				ret = Objutil.defaults(m.getReturnType());
 				if (expireMinutes > 0)
-					event.setExpire(new Timestamp(Util.now() + expireMinutes * 60000L));
+					event.setExpire(Util.now() + expireMinutes * 60000L);
 				try {
 					if (sobj != null) {
 						sobj.handle(event);
