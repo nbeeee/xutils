@@ -83,10 +83,10 @@ public final class DefaultBinder implements Binder, Replace {
 					throw new XutilRuntimeException(e);
 				}
 			else {
-				Logger.LOG.info("{} binding begin......", s);
 				try {
 					((Config) loader.loadClass(s).newInstance()).config(this);
-				} catch (Exception e) {
+				} catch (Throwable e) {
+					Logger.LOG.warn("{} bind error.",e, s);
 					throw rethrow(e);
 				}
 				Logger.LOG.info("{} binding end......", s);
@@ -100,7 +100,6 @@ public final class DefaultBinder implements Binder, Replace {
 		ext = ext.substring(ext.lastIndexOf('.') + 1);
 		InputStream in = null;
 		try {
-			Logger.LOG.info("{} binding begin......", url);
 			if (ext.equals("xml")) {
 				SAXParserFactory factory = SAXParserFactory.newInstance();
 				factory.setValidating(true);
@@ -117,7 +116,8 @@ public final class DefaultBinder implements Binder, Replace {
 				((Config) engine.eval(new InputStreamReader(in = url.openStream()))).config(this);
 			}
 			Logger.LOG.info("{} binding end......", url);
-		} catch (Exception e) {
+		} catch (Throwable e) {
+			Logger.LOG.warn("{} bind error.",e,url);
 			throw rethrow(e);
 		} finally {
 			closeQuietly(in);

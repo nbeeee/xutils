@@ -72,7 +72,7 @@ public final class XMLHandler extends DefaultHandler {
 		} catch (RuntimeException e) {
 			log("startElement", local);
 			throw e;
-		}catch (Error e) {
+		} catch (Error e) {
 			log("endElement", local);
 			throw e;
 		}
@@ -85,14 +85,14 @@ public final class XMLHandler extends DefaultHandler {
 				String s = getBuffer();
 				if (varkey == null)
 					binder.batch(s, xmlurl);
-				else 
+				else
 					binder.setPlaceholder(varkey, s);
 			} else if (current != null && current.endElement(local))
 				current = current.previous;
 		} catch (RuntimeException e) {
 			log("endElement", local);
 			throw e;
-		}catch (Error e) {
+		} catch (Error e) {
 			log("endElement", local);
 			throw e;
 		}
@@ -165,7 +165,7 @@ public final class XMLHandler extends DefaultHandler {
 			if (set || "arg".equals(local)) {
 				if (set)
 					add(new Setter(attrs.getValue("name")));
-				get(size() - 1).addArg(clsOf(attrs.getValue("class"))).ref = attrs.getValue("ref");
+				get(size() - 1).addArg(attrs.getValue("ref"), true).type = clsOf(attrs.getValue("class"));
 			} else if ("call".equals(local)) {
 				add(new Call(attrs.getValue("name")));
 			} else if ("aop".equals(local)) {
@@ -177,13 +177,13 @@ public final class XMLHandler extends DefaultHandler {
 			if ("bean".equals(local) || "array".equals(local) || "alias".equals(local)) {
 				id = binder.put(cache, id, bind(), aoptype, intercepts).die(destroy).eager(eager).name();
 				if (previous != null)
-					previous.get(previous.size() - 1).tail.ref = id;
+					previous.get(previous.size() - 1).addArg(id, false);
 				return true;
 			}
 			if ("set".equals(local) || "arg".equals(local))
-				get(size() - 1).tail.val = getBuffer();
+				get(size() - 1).tail.setVal(getBuffer());
 			else if ("aop".equals(local))
-				intercepts = Objutil.ifNull(getBuffer(), "") ;
+				intercepts = Objutil.ifNull(getBuffer(), "");
 			return false;
 		}
 
@@ -240,8 +240,12 @@ public final class XMLHandler extends DefaultHandler {
 			method = m;
 		}
 
-		Arg addArg(Class type) {
-			return (tail = new Arg(tail, type));
+		Arg addArg(String ref, boolean argOrSet) {
+			if (argOrSet || tail == null || tail.ended)
+				(tail = new Arg(tail, ref)).ended = !argOrSet;
+			else
+				tail.setRef(ref);
+			return tail;
 		}
 
 		Object[] getParamters(Binder binder, List<Object> work) {
@@ -254,19 +258,36 @@ public final class XMLHandler extends DefaultHandler {
 	}
 
 	private static final class Arg {
-		private final Class type;
 		private final Arg prev;
-		String ref, val;
+		private String value;
+		private boolean isRef;
+		boolean ended;
+		Class type;
 
-		Arg(Arg previous, Class c) {
+		Arg(Arg previous, String ref) {
 			prev = previous;
-			type = c;
+			if (ref != null) {
+				isRef = true;
+				value = ref;
+			}
+		}
+
+		void setRef(String ref) {
+			Objutil.validate(ref != null && !isRef, "reference has setted or is null: {}.", ref);
+			value = ref;
+			isRef = true;
+		}
+
+		void setVal(String val) {
+			if (value == null)
+				value = val;
+			ended = true;
 		}
 
 		void get(Binder binder, List<Object> out) {
 			if (prev != null)
 				prev.get(binder, out);
-			BeanReference o = ref == null ? Instance.value(val) : binder.ref(ref);
+			BeanReference o = isRef ? binder.ref(value) : Instance.value(value);
 			out.add(type == null ? o : o.cast(type));
 		}
 	}

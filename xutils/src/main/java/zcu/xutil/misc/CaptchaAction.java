@@ -22,9 +22,13 @@ import zcu.xutil.web.Stream;
 import zcu.xutil.web.View;
 
 public class CaptchaAction implements Action {
-	public static boolean verifyCaptcha(HttpServletRequest req, String captcha) {
+	static boolean verifyCaptcha(HttpServletRequest req, String captcha) {
+		Object o;
 		HttpSession s = req.getSession(false);
-		return s == null || captcha == null ? false : captcha.equals(s.getAttribute("xutils.web.captcha"));
+		if(s == null || ( o = s.getAttribute("xutils.web.captcha")) == null)
+			return false;
+		s.removeAttribute("xutils.web.captcha");
+		return o.equals(captcha);
 	}
 
 	private final Random random = new Random();

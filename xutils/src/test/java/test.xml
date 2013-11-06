@@ -24,11 +24,11 @@
 		<set name="string">${xutils.home}</set>
 		<set name="int" class="int">124</set>
 		<set name="bytearray" ref="@bytearray2" />
-		<set name="objectlist" class="java.util.List" ref="@number"/>
-		<set name="bytelist" class="java.util.List" ref="@bytearray2"/>
+		<set name="objectlist" class="java.util.List" ref="@number" />
+		<set name="bytelist" class="java.util.List" ref="@bytearray2" />
 	</bean>
 	<alias ref="map" id="amap">
-		<aop class="java.util.Map"/>
+		<aop class="java.util.Map" />
 	</alias>
 	<bean class="zcu.xutil.cfg.Book" id="numb" cache="false">
 		<arg>numb</arg>
@@ -36,28 +36,22 @@
 		<arg>2</arg>
 	</bean>
 	<bean class="zcu.xutil.cfg.Store" id="mystoreMap">
-			<arg>
-				<bean class="java.util.HashMap">
-					<set name="REFbook" ref="numb"></set>
-					<set name="NEWbook">
-						<bean class="zcu.xutil.cfg.Book">
-
-								<arg>innnnnrrrrr</arg>
-								<arg class="double">1</arg>
-								<arg>2</arg>
-
-						</bean>
-					</set>
+		<bean class="java.util.HashMap">
+			<set name="REFbook" ref="numb"></set>
+			<set name="NEWbook">
+				<bean class="zcu.xutil.cfg.Book">
+					<arg>innnnnrrrrr</arg>
+					<arg class="double">1</arg>
+					<arg>2</arg>
 				</bean>
-			</arg>
+			</set>
+		</bean>
 	</bean>
 	<bean class="zcu.xutil.cfg.Store" id="mystore" destroy="xx">
-			<arg>${mystore}</arg>
-			<arg>
-				<array class="zcu.xutil.cfg.Book">
-					<arg ref="numb"/>
-				</array>
-			</arg>
+		<arg>${mystore}</arg>
+		<array class="zcu.xutil.cfg.Book">
+			<arg ref="numb" />
+		</array>
 	</bean>
 	<array class="byte" id="bytearray">
 		<arg>1</arg>
@@ -66,7 +60,7 @@
 	</array>
 	<bean class="int" id="int">
 
-			<arg><![CDATA[999999]]></arg>
+		<arg><![CDATA[999999]]></arg>
 
 	</bean>
 
@@ -79,7 +73,7 @@
 		<set name="firstInt" ref="int" />
 		<set name="firstbytes" ref="bytearray" />
 	</bean>
-	
+
 
 	<bean id="staticFactory" from="zcu.xutil.Objutil:toURL">
 		<arg class="java.io.File">${xutils.home}</arg>
@@ -106,5 +100,5 @@
 			</array>
 		</set>
 	</bean>
-	<bean class="java.lang.String" id="factory" from="bean2:getFirstString"/>
+	<bean class="java.lang.String" id="factory" from="bean2:getFirstString" />
 </beans>

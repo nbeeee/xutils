@@ -377,7 +377,7 @@ public class EventTest implements Serializable {
 		System.out.println("cache get nontime: " + (end - begin));
 		assertTrue(null != primaryCache.get("12345"));
 		try {
-			Thread.sleep(1100); // timeout
+			Thread.sleep(2000); // timeout
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

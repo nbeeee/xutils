@@ -2,7 +2,7 @@
 <!ELEMENT beans (array|bean|alias|import)+>
 <!ELEMENT import (#PCDATA)>
 <!ATTLIST import key CDATA #IMPLIED>
-<!ELEMENT bean (arg*,(set|call)*,aop?)>
+<!ELEMENT bean ((arg|bean|array)*,(set|call)*,aop?)>
 <!ATTLIST bean id CDATA #IMPLIED>
 <!ATTLIST bean class CDATA #IMPLIED>
 <!ATTLIST bean cache (true|false) "true">
@@ -10,7 +10,7 @@
 <!ATTLIST bean from CDATA #IMPLIED>
 <!ATTLIST bean output CDATA #IMPLIED>
 <!ATTLIST bean destroy CDATA #IMPLIED>
-<!ELEMENT array (arg*)>
+<!ELEMENT array (arg|bean|array)*>
 <!ATTLIST array id CDATA #IMPLIED>
 <!ATTLIST array cache (true|false) "false">
 <!ATTLIST array class CDATA #REQUIRED>
@@ -21,7 +21,7 @@
 <!ATTLIST set name CDATA #REQUIRED>
 <!ATTLIST set class CDATA #IMPLIED>
 <!ATTLIST set ref CDATA #IMPLIED>
-<!ELEMENT call (arg*)>
+<!ELEMENT call (arg|bean|array)*>
 <!ATTLIST call name CDATA #REQUIRED>
 <!ELEMENT aop (#PCDATA)>
 <!ATTLIST aop class CDATA #IMPLIED>
