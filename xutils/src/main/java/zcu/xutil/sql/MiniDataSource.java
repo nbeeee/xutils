@@ -27,8 +27,6 @@ import javax.sql.ConnectionEvent;
 import javax.sql.ConnectionEventListener;
 import javax.sql.PooledConnection;
 
-import zcu.xutil.Disposable;
-import zcu.xutil.DisposeManager;
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.XutilRuntimeException;
@@ -92,7 +90,7 @@ import zcu.xutil.utils.Util;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 @MbeanResource
-public final class MiniDataSource extends AbstractDataSource implements Disposable {
+public final class MiniDataSource extends AbstractDataSource{
 	static final Logger logger = Logger.getLogger(MiniDataSource.class);
 
 	final short redundancy;
@@ -114,7 +112,6 @@ public final class MiniDataSource extends AbstractDataSource implements Disposab
 		this.permits = new Semaphore(maxSize = maxPoolSize);
 		this.stack = new Stack();
 		this.cpds = dataSource;
-		DisposeManager.register(this);
 	}
 	@Override
 	protected  CommonDataSource getBase(){

@@ -22,7 +22,14 @@ import java.sql.SQLException;
 import javax.sql.CommonDataSource;
 import javax.sql.DataSource;
 
-public abstract class AbstractDataSource implements DataSource{
+import zcu.xutil.Disposable;
+import zcu.xutil.DisposeManager;
+
+public abstract class AbstractDataSource implements DataSource, Disposable {
+	protected AbstractDataSource(){
+		DisposeManager.register(this);
+	}
+	
 	protected abstract CommonDataSource getBase();
 
 	@Override

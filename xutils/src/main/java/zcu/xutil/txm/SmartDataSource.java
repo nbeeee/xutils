@@ -22,6 +22,7 @@ import java.sql.Statement;
 import javax.sql.CommonDataSource;
 import javax.sql.DataSource;
 
+import zcu.xutil.DisposeManager;
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
 import zcu.xutil.sql.AbstractDataSource;
@@ -35,6 +36,7 @@ import zcu.xutil.utils.Util;
 public class SmartDataSource extends AbstractDataSource implements MResourceFactory {
 	private final DataSource datasource;
 	private int commitOrder;
+	private volatile String destroyMethod;
 	String testQuery;
 
 	public SmartDataSource(DataSource dataSource) {
@@ -45,7 +47,11 @@ public class SmartDataSource extends AbstractDataSource implements MResourceFact
 	protected  CommonDataSource getBase(){
 		return datasource;
 	}
-
+	
+	public void setDestroyMethod(String method) {
+		destroyMethod = method;
+	}
+	
 	/**
 	 * 在事务提交前检查连接
 	 *
@@ -53,6 +59,15 @@ public class SmartDataSource extends AbstractDataSource implements MResourceFact
 	public void setTestQuery(String query) {
 		testQuery = query;
 	}
+	
+	@Override
+	public void destroy() {
+		String s = destroyMethod;
+		destroyMethod = null;
+		if(s != null)
+			DisposeManager.destroyCall(datasource, s);
+	}
+	
 	@Override
 	public Connection getConnection() throws SQLException {
 		try {
