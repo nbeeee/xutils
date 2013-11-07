@@ -1,4 +1,4 @@
-﻿package zcu.xutil.utils;
+package zcu.xutil.utils;
 
 import java.nio.charset.Charset;
 import java.util.BitSet;

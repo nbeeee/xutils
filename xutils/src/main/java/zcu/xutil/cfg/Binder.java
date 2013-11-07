@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2009 zaichu xiao
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@ public interface Binder{
 	 * @param proxyIface
 	 *            代理接口, null 代理所有接口。
 	 * @param interceptors
-	 *            拦截器名, empty 代理自动匹配拦截器.<br>
+	 *            拦截器名, 空字符串(长度为0) 代理自动匹配拦截器.<br>
 	 *            proxyIface==null && interceptors==null 无拦截器(不代理).
 	 *
 	 */
@@ -43,7 +43,7 @@ public interface Binder{
 
 	/**
 	 *
-	 * @see Binder#put(boolean, String, Provider, Class, String[])
+	 * @see Binder#put(boolean, String, Provider, Class, String)
 	 */
 	LifeCtrl put(boolean cache, String name, Provider provider);
 
@@ -72,8 +72,6 @@ public interface Binder{
 	 *
 	 * @param url
 	 *            配置文件路径.
-	 * @param loader
-	 *            配置文件类加载器.
 	 *
 	 */
 	void bind(URL url);

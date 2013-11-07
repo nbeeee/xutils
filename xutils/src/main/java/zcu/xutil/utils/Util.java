@@ -1,4 +1,4 @@
-﻿package zcu.xutil.utils;
+package zcu.xutil.utils;
 
 import java.io.File;
 import java.io.IOException;

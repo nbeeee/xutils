@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2009 zaichu xiao
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,7 +34,7 @@ public abstract class BeanReference {
 	/**
 	 * 将工厂以单例模式(cache)绑定 <br>
 	 * 
-	 * @see Binder#put(boolean, String, Provider, Class, String[])
+	 * @see Binder#put(boolean, String, Provider, Class, String)
 	 */
 	public final LifeCtrl uni(Binder binder,String name, Class proxyIface, String interceptors) {
 		return binder.put(true, name, get(), proxyIface, interceptors);

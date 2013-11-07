@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2009 zaichu xiao
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,17 +15,16 @@
  */
 package zcu.xutil.sql;
 
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import javax.sql.CommonDataSource;
 import javax.sql.ConnectionPoolDataSource;
 import javax.sql.ConnectionEvent;
 import javax.sql.ConnectionEventListener;
-import javax.sql.DataSource;
 import javax.sql.PooledConnection;
 
 import zcu.xutil.Disposable;
@@ -93,7 +92,7 @@ import zcu.xutil.utils.Util;
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
 @MbeanResource
-public final class MiniDataSource implements DataSource, Disposable {
+public final class MiniDataSource extends AbstractDataSource implements Disposable {
 	static final Logger logger = Logger.getLogger(MiniDataSource.class);
 
 	final short redundancy;
@@ -118,22 +117,9 @@ public final class MiniDataSource implements DataSource, Disposable {
 		DisposeManager.register(this);
 	}
 	@Override
-	public PrintWriter getLogWriter() throws SQLException {
-		return cpds.getLogWriter();
+	protected  CommonDataSource getBase(){
+		return cpds;
 	}
-	@Override
-	public int getLoginTimeout() throws SQLException {
-		return cpds.getLoginTimeout();
-	}
-	@Override
-	public void setLogWriter(PrintWriter out) throws SQLException {
-		cpds.setLogWriter(out);
-	}
-	@Override
-	public void setLoginTimeout(int seconds) throws SQLException {
-		cpds.setLoginTimeout(seconds);
-	}
-
 	/**
 	 * 设置连接检验SQL
 	 * 
@@ -182,10 +168,7 @@ public final class MiniDataSource implements DataSource, Disposable {
 	public int getActiveNumber() {
 		return maxSize - permits.availablePermits();
 	}
-	@Override
-	public Connection getConnection(String username, String password) throws SQLException {
-		throw new UnsupportedOperationException("Cannot specify username/password for connections");
-	}
+
 	@Override
 	public Connection getConnection() throws SQLException {
 		try {
@@ -214,24 +197,6 @@ public final class MiniDataSource implements DataSource, Disposable {
 				throw (SQLException) e;
 			throw Objutil.rethrow(e);
 		}
-	}
-
-	/**
-	 * @param iface
-	 * @throws SQLException
-	 */
-	@Override
-	public boolean isWrapperFor(Class<?> iface) throws SQLException {
-		return false;
-	}
-
-	/**
-	 * @param iface
-	 * @throws SQLException
-	 */
-	@Override
-	public <T> T unwrap(Class<T> iface) throws SQLException {
-		return null;
 	}
 
 	static void closeQuietly(PooledConnection pooledConnection) {

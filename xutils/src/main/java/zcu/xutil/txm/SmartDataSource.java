@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2009 zaichu xiao
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,16 @@
  */
 package zcu.xutil.txm;
 
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import javax.sql.CommonDataSource;
 import javax.sql.DataSource;
 
 import zcu.xutil.Logger;
 import zcu.xutil.Objutil;
+import zcu.xutil.sql.AbstractDataSource;
 import zcu.xutil.sql.CloseSuppressing;
 import zcu.xutil.utils.Util;
 
@@ -31,7 +32,7 @@ import zcu.xutil.utils.Util;
  *
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
-public class SmartDataSource implements DataSource, MResourceFactory {
+public class SmartDataSource extends AbstractDataSource implements MResourceFactory {
 	private final DataSource datasource;
 	private int commitOrder;
 	String testQuery;
@@ -41,20 +42,8 @@ public class SmartDataSource implements DataSource, MResourceFactory {
 		this.datasource = Objutil.notNull(dataSource, "dataSource is null");
 	}
 	@Override
-	public PrintWriter getLogWriter() throws SQLException {
-		return datasource.getLogWriter();
-	}
-	@Override
-	public int getLoginTimeout() throws SQLException {
-		return datasource.getLoginTimeout();
-	}
-	@Override
-	public void setLogWriter(PrintWriter out) throws SQLException {
-		datasource.setLogWriter(out);
-	}
-	@Override
-	public void setLoginTimeout(int seconds) throws SQLException {
-		datasource.setLoginTimeout(seconds);
+	protected  CommonDataSource getBase(){
+		return datasource;
 	}
 
 	/**
@@ -78,10 +67,6 @@ public class SmartDataSource implements DataSource, MResourceFactory {
 			throw Objutil.rethrow(e);
 		}
 	}
-	@Override
-	public Connection getConnection(String username, String password) throws SQLException {
-		throw new UnsupportedOperationException("Cannot specify username/password for connections");
-	}
 
 	public void setLastCommit(boolean lastCommit) {
 		this.commitOrder = lastCommit ? 1 : 0 ;
@@ -93,24 +78,6 @@ public class SmartDataSource implements DataSource, MResourceFactory {
 	@Override
 	public int getCommitOrder() {
 		return commitOrder;
-	}
-
-	/**
-	 * @param iface
-	 * @throws SQLException
-	 */
-	@Override
-	public boolean isWrapperFor(Class<?> iface) throws SQLException {
-		return false;
-	}
-
-	/**
-	 * @param iface
-	 * @throws SQLException
-	 */
-	@Override
-	public <T> T unwrap(Class<T> iface) throws SQLException {
-		return null;
 	}
 
 	private final class CRes implements MResource {
@@ -172,7 +139,6 @@ public class SmartDataSource implements DataSource, MResourceFactory {
 				public void rollback() throws SQLException {
 					getDelegate();
 					txinfo.setRollbackOnly();
-
 				}
 
 				@Override

@@ -1,4 +1,4 @@
-﻿package zcu.xutil.cfg;
+package zcu.xutil.cfg;
 
 import java.io.File;
 import java.net.MalformedURLException;

@@ -1,4 +1,4 @@
-﻿package zcu.xutil;
+package zcu.xutil;
 
 public interface Constants {
 	// =================key in xutils.properties file begin===============

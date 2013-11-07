@@ -1,4 +1,4 @@
-﻿package zcu.xutil.cfg;
+package zcu.xutil.cfg;
 
 import zcu.xutil.Objutil;
 
