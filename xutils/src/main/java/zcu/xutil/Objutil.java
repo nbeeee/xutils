@@ -341,15 +341,14 @@ public class Objutil implements Replace {
 		static final ENV env = new ENV();
 		static {
 			try {
-				String home = env.getProperty(XUTILS_HOME);
-				home = home == null ? env.getProperty("user.dir") : new File(home).getCanonicalPath();
-				env.put(XUTILS_HOME, home);
-				if (env.getProperty(XUTILS_LOCALHOST) == null)
-					env.put(XUTILS_LOCALHOST, InetAddress.getLocalHost().getHostName());
-				File file = new File(home, "xutils.xml");
-				boolean xml = file.exists();
-				if (xml || (file = new File(home, "xutils.properties")).exists())
-					load(env, new FileInputStream(file), xml);
+				env.put(XUTILS_HOME, env.getProperty("user.dir"));
+				env.put(XUTILS_LOCALHOST, InetAddress.getLocalHost().getHostName());
+				InputStream in = Objutil.class.getClassLoader().getResourceAsStream("xutils.xml");
+				if (in != null)
+					load(env, in, true);
+				File file = new File(env.getProperty(XUTILS_HOME), "xutils.xml");
+				if (file.exists())
+					load(env, new FileInputStream(file), true);
 			} catch (IOException e) {
 				throw new XutilRuntimeException(e);
 			}

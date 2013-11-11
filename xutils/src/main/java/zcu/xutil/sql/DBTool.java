@@ -147,7 +147,7 @@ public abstract class DBTool {
 		Objutil.validate(cls instanceof Class, "params map must contains [ID name , ID type]");
 		Object primaryKey;
 		if (id.getPolicy() == ID.SEQUENCE) {
-			primaryKey = query(conn, id.getGenSQL(), FirstField.get((Class<?>) cls));
+			primaryKey = query(conn, id.getIdSQL(), FirstField.get((Class<?>) cls));
 			paramsMap.put(id.getName(), Objutil.notNull(primaryKey, "null primary key"));
 			return update(conn, npsql.getSql(), npsql.fromMap(paramsMap));
 		}
@@ -155,7 +155,7 @@ public abstract class DBTool {
 			primaryKey = returnGK(conn, npsql.getSql(), FirstField.get((Class<?>) cls), npsql.fromMap(paramsMap));
 		else {
 			update(conn, npsql.getSql(), npsql.fromMap(paramsMap));
-			primaryKey = query(conn, id.getGenSQL(), FirstField.get((Class<?>) cls));
+			primaryKey = query(conn, id.getIdSQL(), FirstField.get((Class<?>) cls));
 		}
 		paramsMap.put(id.getName(), Objutil.notNull(primaryKey, "null primary key"));
 		return 1;
@@ -186,7 +186,7 @@ public abstract class DBTool {
 		Accessor acs = getAllAccessor(entity.getClass()).get(id.getName());
 		Object primaryKey;
 		if (id.getPolicy() == ID.SEQUENCE) {
-			primaryKey = query(conn, id.getGenSQL(), FirstField.get(acs.getType()));
+			primaryKey = query(conn, id.getIdSQL(), FirstField.get(acs.getType()));
 			acs.setValue(entity, Objutil.notNull(primaryKey, "null primary key"));
 			return update(conn, npsql.getSql(), npsql.fromBean(entity));
 		}
@@ -194,7 +194,7 @@ public abstract class DBTool {
 			primaryKey = returnGK(conn, npsql.getSql(), FirstField.get(acs.getType()), npsql.fromBean(entity));
 		else {
 			update(conn, npsql.getSql(), npsql.fromBean(entity));
-			primaryKey = query(conn, id.getGenSQL(), FirstField.get(acs.getType()));
+			primaryKey = query(conn, id.getIdSQL(), FirstField.get(acs.getType()));
 		}
 		acs.setValue(entity, Objutil.notNull(primaryKey, "null primary key"));
 		return 1;

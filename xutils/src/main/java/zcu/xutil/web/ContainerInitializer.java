@@ -15,15 +15,28 @@
  */
 package zcu.xutil.web;
 
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.Set;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.FilterRegistration;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+
 public class ContainerInitializer implements ServletContainerInitializer {
 	@Override
 	public void onStartup(Set<Class<?>> set, ServletContext sc) throws ServletException {
-		if (ContextListener.getConfig(sc) != null) 
+		if (ContextListener.getConfig(sc) != null){
 			sc.addListener(ContextListener.class);
+			Map<String,? extends FilterRegistration> map = sc.getFilterRegistrations();
+			for(FilterRegistration fr: map.values()){
+				if(fr.getClassName().equals(FilterProxy.class.getName()))
+					return;
+			}
+			sc.addFilter(FilterProxy.class.getName(), FilterProxy.class).addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class), true, "/*");
+		}
 	}
 }

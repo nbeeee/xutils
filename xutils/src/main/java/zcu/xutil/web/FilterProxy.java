@@ -27,22 +27,29 @@ import javax.servlet.ServletResponse;
 
 import zcu.xutil.Objutil;
 import zcu.xutil.cfg.Context;
+import zcu.xutil.cfg.NProvider;
 import zcu.xutil.cfg.Provider;
 
-public class FilterProxy implements Filter {
+public final class FilterProxy implements Filter {
 	private Filter[] filters;
 
 	public void init(FilterConfig cfg) throws ServletException {
 		List<String> targetNames = Objutil.split(cfg.getInitParameter("targetNames"), ',');
 		int len = targetNames.size();
-		Objutil.validate(len > 0, "InitParameter targetNames is empty");
 		Context ctx = Webutil.getAppContext(cfg.getServletContext());
-		filters = new Filter[len];
-		for (int i = 0; i < len; i++) {
-			String name = targetNames.get(i).trim();
-			Provider p = Objutil.notNull(ctx.getProvider(name),"bean: {} not exist." , name);
-			Objutil.validate(Filter.class.isAssignableFrom(p.getType()),"bena: {} is not Filter.",name);
-			(filters[i] = (Filter) p.instance()).init(cfg);
+		if (len == 0) {
+			List<NProvider> list = ctx.getProviders(Filter.class);
+			filters = new Filter[len = list.size()];
+			while (--len >= 0)
+				(filters[len] = (Filter) list.get(len).instance()).init(cfg);
+		} else {
+			filters = new Filter[len];
+			while (--len >= 0) {
+				String name = targetNames.get(len).trim();
+				Provider p = Objutil.notNull(ctx.getProvider(name), "bean: {} not exist.", name);
+				Objutil.validate(Filter.class.isAssignableFrom(p.getType()), "bena: {} is not a Filter.", name);
+				(filters[len] = (Filter) p.instance()).init(cfg);
+			}
 		}
 	}
 
@@ -60,7 +67,7 @@ public class FilterProxy implements Filter {
 
 	@Override
 	public void destroy() {
-		//nothing
+		// nothing
 	}
 
 	private static final class Chain implements FilterChain {

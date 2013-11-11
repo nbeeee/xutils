@@ -38,7 +38,7 @@ public enum DBType {
 	mysql(null, "SELECT LAST_INSERT_ID()", "SELECT 1", "MySQL"), // mysql
 	hsql("SELECT NEXT VALUE FOR {} FROM system_sequences", "CALL IDENTITY()", "SELECT 1 FROM dual",
 			"HSQL Database Engine"), // hsql
-	derby(null, "VALUES IDENTITY_VAL_LOCAL()", "SELECT count(*) FROM sys.systables WHERE 1=0", "Apache Derby"), // derby
+	derby("NEXT VALUE FOR {}", "VALUES IDENTITY_VAL_LOCAL()", "SELECT count(*) FROM sys.systables WHERE 1=0", "Apache Derby"), // derby
 	postgresql("SELECT NEXTVAL ('{}')", "SELECT CURRVAL ('{}')", "SELECT 1", "PostgreSQL"), // postgresql
 	sybase(null, "SELECT @@IDENTITY", "SELECT 1", "Sybase SQL Server", "Adaptive Server Enterprise"), // sybase
 	h2("CALL NEXT VALUE FOR {}", "CALL IDENTITY()", "SELECT 1 FROM dual", "H2"), // h2db

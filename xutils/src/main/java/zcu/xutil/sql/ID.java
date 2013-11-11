@@ -26,6 +26,7 @@ package zcu.xutil.sql;
  */
 public final class ID {
 	public static final int AUTO=0,IDENTITY=1,SEQUENCE=2;
+	
 	private final String name;
 	private int  policy;
 	private String genSQL;
@@ -43,7 +44,7 @@ public final class ID {
 	public String getName() {
 		return name;
 	}
-	public String getGenSQL() {
+	public String getIdSQL() {
 		return genSQL;
 	}
 	public int getPolicy(){
@@ -55,7 +56,7 @@ public final class ID {
 	 * @param sequenceSQL 产生主键的SQL
 	 * @return this Object
 	 */
-	public ID seq(String sequenceSQL){
+	public ID sequence(String sequenceSQL){
 		genSQL=sequenceSQL;
 		policy=SEQUENCE;
 		return this;
@@ -66,7 +67,7 @@ public final class ID {
 	 * @param identitySQL 产生主键的SQL
 	 * @return this Object
 	 */
-	public ID ide(String identitySQL){
+	public ID identity(String identitySQL){
 		genSQL=identitySQL;
 		policy=IDENTITY;
 		return this;

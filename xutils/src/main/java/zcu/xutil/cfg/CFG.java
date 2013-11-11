@@ -40,8 +40,7 @@ public class CFG implements Config {
 			synchronized (CFG.class) {
 				if (root == null) {
 					String s = systring(Constants.XUTILS_CFG_ROOT, "").trim();
-					root = build(null,
-							isEmpty(s) ? new CFG() : (Config) newInstance(loadclass(contextLoader(), s)));
+					root = build(null, isEmpty(s) ? new CFG() : (Config) newInstance(loadclass(contextLoader(), s)));
 				}
 			}
 		}
@@ -49,7 +48,7 @@ public class CFG implements Config {
 	}
 
 	public static final Context build(Context parent, Config config) {
-		DefaultBinder b = new DefaultBinder(config.toString() , parent, config.getClass().getClassLoader());
+		DefaultBinder b = new DefaultBinder(config.toString(), parent, config.getClass().getClassLoader());
 		try {
 			config.config(b);
 		} catch (Exception e) {
@@ -122,9 +121,8 @@ public class CFG implements Config {
 
 	@Override
 	public void config(Binder b) throws Exception {
-		ClassLoader loader = getClass().getClassLoader();
 		File file = new File(systring(Constants.XUTILS_HOME), "xutils-root.xml");
-		URL url = file.exists() ? toURL(file) : loader.getResource("xutils-root.xml");
+		URL url = file.exists() ? toURL(file) : getClass().getClassLoader().getResource("xutils-root.xml");
 		if (url != null)
 			b.bind(url);
 	}

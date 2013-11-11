@@ -52,7 +52,7 @@ public class XcronTest implements Runnable{
 	}
 	@Test
 	public void testBase64() throws IOException {
-		File f =new File(Objutil.systring("xutil.home","xutils.properties"));
+		File f =new File(Objutil.systring("xutil.home","xutils.xml"));
 		InputStream in =new FileInputStream(f);
 		String encoded =Base64.encode(in,true);
 		byte[] b =new BASE64Decoder().decodeBuffer(encoded);

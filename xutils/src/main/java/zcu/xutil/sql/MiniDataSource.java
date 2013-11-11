@@ -139,7 +139,7 @@ public final class MiniDataSource extends AbstractDataSource{
 				}
 				node.item.addConnectionEventListener(node);
 				node.millis = now;
-				return new Wrapper(result);
+				return result;
 			} catch (Throwable e) {
 				closeQuietly(node.item);
 				logger.info("close invalid connection.", e);
@@ -184,7 +184,6 @@ public final class MiniDataSource extends AbstractDataSource{
 				pooledConn = cpds.getPooledConnection();
 				result = pooledConn.getConnection();
 				pooledConn.addConnectionEventListener(new Node(pooledConn));
-				result = new Wrapper(result);
 			}
 			return result;
 		} catch (Throwable e) {
@@ -204,35 +203,6 @@ public final class MiniDataSource extends AbstractDataSource{
 			}
 	}
 
-	private final class Wrapper extends CloseSuppressing {
-		Wrapper(Connection c) {
-			super(c);
-		}
-
-		@Override
-		public void close() throws SQLException {
-			Connection c = delegate;
-			delegate = null;
-			if (c != null)
-				try {
-					c.close();
-				} catch (SQLException e) {
-					forceCheck = true;
-					throw e;
-				} finally {
-					permits.release();
-				}
-		}
-
-		@Override
-		protected void finalize() throws Throwable {
-			if (delegate != null) {
-				logger.warn("connection not close.");
-				close();
-			}
-		}
-	}
-
 	private final class Node implements ConnectionEventListener {
 		final PooledConnection item;
 		volatile long millis;
@@ -245,10 +215,10 @@ public final class MiniDataSource extends AbstractDataSource{
 		@Override
 		public void connectionClosed(ConnectionEvent event) {
 			item.removeConnectionEventListener(this);
-			long now = Util.now();
-			int activeMillis = (int) (now - millis);
-			millis = now;
+			long activeMillis = millis;
+			activeMillis = (millis = Util.now()) - activeMillis;
 			stack.add(this);
+			permits.release();
 			if (activeMillis > 500) {
 				if (activeMillis > 5000)
 					logger.warn("connection use millis: {}", activeMillis);
@@ -258,8 +228,9 @@ public final class MiniDataSource extends AbstractDataSource{
 		}
 		@Override
 		public void connectionErrorOccurred(ConnectionEvent event) {
-			forceCheck = true;
 			item.removeConnectionEventListener(this);
+			forceCheck = true;
+			permits.release();
 			closeQuietly(item);
 			logger.warn("connection use millis: {}", event.getSQLException(), Util.now() - millis);
 		}

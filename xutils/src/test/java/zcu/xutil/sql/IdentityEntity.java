@@ -44,7 +44,7 @@ public class IdentityEntity {
 	public final static	String createtable="CREATE TABLE t_event (id int IDENTITY,eventname VARCHAR(50),PRIMARY KEY(id))";
 
 	public final static	String retrieve = "select * from t_event where id=?";
-	public final static	NpSQL  create =new NpSQL(new ID("id").ide(DBType.h2.identitySQL("")),
+	public final static	NpSQL  create =new NpSQL(new ID("id").identity(DBType.h2.identitySQL("")),
 			"insert into t_event (eventname) values(:eventName)");
 	public final static	NpSQL  update = new NpSQL(
 			"update t_event set eventname=:eventName where id=:id");
