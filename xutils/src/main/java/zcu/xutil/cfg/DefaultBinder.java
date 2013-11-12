@@ -65,8 +65,8 @@ public final class DefaultBinder implements Binder, Replace {
 
 	@Override
 	public LifeCtrl put(boolean cache, String name, Provider provider, Class<?> iface, String interceptors) {
-		if(interceptors != null || iface != null)
-			provider =  new ProxyDecorator(iface, provider, interceptors);
+		if (interceptors != null || iface != null)
+			provider = new ProxyDecorator(iface, provider, interceptors);
 		return put(cache, name, provider);
 	}
 
@@ -74,23 +74,22 @@ public final class DefaultBinder implements Binder, Replace {
 		List<String> list = split(configs, ',');
 		for (int i = 0, len = list.size(); i < len; i++) {
 			String s = list.get(i).trim();
-			if (s.startsWith("path:"))
+			if (s.startsWith("class:"))
+				try {
+					((Config) loader.loadClass(s.substring("class:".length())).newInstance()).config(this);
+					Logger.LOG.info("{} binding end......", s);
+				} catch (Throwable e) {
+					Logger.LOG.warn("{} bind error.", e, s);
+					throw rethrow(e);
+				}
+			else if (s.startsWith("path:"))
 				bind(notNull(loader.getResource(s.substring("path:".length())), "{} not found.", s));
-			else if (loader.getResource(s.replace('.', '/').concat(".class")) == null)
+			else
 				try {
 					bind(new URL(ctx == null ? new File(systring(Constants.XUTILS_HOME)).toURI().toURL() : ctx, s));
 				} catch (MalformedURLException e) {
 					throw new XutilRuntimeException(e);
 				}
-			else {
-				try {
-					((Config) loader.loadClass(s).newInstance()).config(this);
-				} catch (Throwable e) {
-					Logger.LOG.warn("{} bind error.",e, s);
-					throw rethrow(e);
-				}
-				Logger.LOG.info("{} binding end......", s);
-			}
 		}
 	}
 
@@ -117,7 +116,7 @@ public final class DefaultBinder implements Binder, Replace {
 			}
 			Logger.LOG.info("{} binding end......", url);
 		} catch (Throwable e) {
-			Logger.LOG.warn("{} bind error.",e,url);
+			Logger.LOG.warn("{} bind error.", e, url);
 			throw rethrow(e);
 		} finally {
 			closeQuietly(in);

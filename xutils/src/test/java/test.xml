@@ -75,7 +75,7 @@
 	</bean>
 
 
-	<bean id="staticFactory" from="zcu.xutil.Objutil:toURL">
+	<bean id="staticFactory" from="zcu.xutil.Objutil.toURL">
 		<arg class="java.io.File">${xutils.home}</arg>
 	</bean>
 	<bean class="zcu.xutil.FirstBean" id="output" output="getFirstString">

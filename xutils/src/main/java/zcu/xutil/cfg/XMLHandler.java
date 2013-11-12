@@ -200,12 +200,11 @@ public final class XMLHandler extends DefaultHandler {
 			String s = call.method;
 			if (Objutil.isEmpty(s))
 				ret = create(type, params);
-			else if ((i = s.lastIndexOf(':')) < 0)
-				ret = create(type, type, s, params);
+			else if ((i = s.lastIndexOf(':')) >= 0)
+				ret = binder.ref(s.substring(0, i)).ext(type, s.substring(i + 1), params);
 			else {
-				String r = s.substring(0, i);
-				s = s.substring(i + 1);
-				ret = binder.exist(r) ? binder.ref(r).ext(type, s, params) : create(type, clsOf(r), s, params);
+				i = s.lastIndexOf('.');
+				ret = create(type,  i > 0 ? clsOf(s.substring(0, i)) : type, s.substring(i + 1), params);
 			}
 			final int len = size();
 			final boolean map = Map.class.isAssignableFrom(ret.getType());
