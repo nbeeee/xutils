@@ -17,8 +17,22 @@
 			</bean>
 		</arg>
 	</bean>
+	<bean id="db2" class="zcu.xutil.txm.SmartDataSource">
+		<bean class="zcu.xutil.sql.MiniDataSource" destroy="destroy">
+			<bean class="com.ibm.db2.jcc.DB2ConnectionPoolDataSource">
+				<set name="ServerName">192.168.1.10</set>
+				<set name="DatabaseName">zdb</set>
+				<set name="PortNumber">6666</set>
+				<set name="DriverType">4</set>
+				<set name="User">ypinst</set>
+				<set name="Password">ypinst</set>
+			</bean>
+			<arg>4</arg>
+			<arg>8</arg>
+		</bean>
+	</bean>
 	<bean id="query" class="zcu.xutil.sql.Query">
 		<arg ref="h2ds" />
 	</bean>
-	
+
 </beans>

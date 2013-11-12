@@ -84,8 +84,29 @@ import zcu.xutil.utils.Util;
  * <p>
  * For Other<br>
  * com.ibm.db2.jcc.DB2ConnectionPoolDataSource<br>
+ * dataSource.setDriverType(4);<br>
+ * dataSource.setServerName("server1.yourdomain.com");<br>
+ * dataSource.setPortNumber(50000);<br>
+ * dataSource.setDatabaseName("mydb");<br>
+ * dataSource.setUser("user");<br>
+ * dataSource.setPassword("sesame");<br>
+ * 
  * oracle.jdbc.pool.OracleConnectionPoolDataSource<br>
+ * dataSource.setDriverType("thin");<br>
+ * dataSource.setServerName("server1.yourdomain.com");<br>
+ * dataSource.setPortNumber(1521);<br>
+ * dataSource.setServiceName("db1.yourdomain.com");<br>
+ * dataSource.setUser("system");<br>
+ * dataSource.setPassword("sesame");<br>
+
  * com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource<br>
+ * maxdb<br>
+ * com.sap.dbtech.jdbcext.ConnectionPoolDataSourceSapDB dataSource = new com.sap.dbtech.jdbcext.ConnectionPoolDataSourceSapDB();<br>
+ * dataSource.setDatabaseName("dbname");<br>
+ * dataSource.setServerName("dbhost");<br>
+ * dataSource.setUser("user");<br>
+ * dataSource.setPassword("password");<br>
+
  * 
  * @author <a href="mailto:zxiao@yeepay.com">xiao zaichu</a>
  */
