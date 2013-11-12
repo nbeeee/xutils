@@ -26,20 +26,24 @@ import org.bee.tl.core.GroupTemplate;
 import org.bee.tl.core.Template;
 
 import zcu.xutil.Logger;
+import zcu.xutil.Objutil;
 import zcu.xutil.XutilRuntimeException;
 
-public class BeeTemplate{
+public class BeeTemplate {
 	private volatile GroupTemplate group;
 	private final String root;
 	private final String tempFolder;
 	private boolean optimize = true;
 	private boolean nativeCall = true;
+	private String htmlTagSupport;
+	private String statementStart = "<%";
+	private String statementEnd = "%>";
 	private String placeholderStart = "${";
 	private String placeholderEnd = "}";
-	private String charset = "GBK";
+	private String charset = "UTF-8";
 
-	// 每2秒检测一次,用于开发
-	int check = 2;
+	// 检测模板变化时间间隔,用于开发
+	int check;
 
 	public BeeTemplate(String rootpath) {
 		root = rootpath + File.separator + "beetl";
@@ -52,6 +56,18 @@ public class BeeTemplate{
 
 	public void setOptimize(boolean bool) {
 		this.optimize = bool;
+	}
+
+	public void setHtmlTagSupport(String prefix) {
+		this.htmlTagSupport = prefix;
+	}
+
+	public void setStatementStart(String start) {
+		this.statementStart = start;
+	}
+
+	public void setStatementEnd(String end) {
+		this.statementEnd = end;
 	}
 
 	public void setPlaceholderStart(String start) {
@@ -75,10 +91,12 @@ public class BeeTemplate{
 			synchronized (this) {
 				if (group == null) {
 					group = new GroupTemplate(new File(root));
-					group.config("<!--:", "-->", placeholderStart, placeholderEnd);
+					group.config(statementStart, statementEnd, placeholderStart, placeholderEnd);
 					group.setTempFolder(tempFolder);
 					if (nativeCall)
 						group.enableNativeCall();
+					if (!Objutil.isEmpty(htmlTagSupport))
+						group.enableHtmlTagSupport(htmlTagSupport);
 					if (optimize) {
 						group.enableOptimize();
 						Logger.LOG.info("Beetl允许优化，位于:{}", tempFolder);
